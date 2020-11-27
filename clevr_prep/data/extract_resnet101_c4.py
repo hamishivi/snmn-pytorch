@@ -7,7 +7,7 @@ import skimage.transform
 import numpy as np
 import tensorflow as tf
 
-from . import resnet_v1
+from resnet_v1 import resnet_v1_101_c4
 
 channel_mean = np.array([123.68, 116.779, 103.939], dtype=np.float32)
 
@@ -26,7 +26,7 @@ H = 224
 W = 224
 
 image_batch = tf.placeholder(tf.float32, [1, H, W, 3])
-resnet101_c4 = resnet_v1.resnet_v1_101_c4(image_batch, is_training=False)
+resnet101_c4 = resnet_v1_101_c4(image_batch, is_training=False)
 saver = tf.train.Saver()
 sess = tf.Session(
     config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))

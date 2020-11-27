@@ -1,5 +1,7 @@
 # SNMN-pytorch
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1aaTKkApKLeQOuRdXRtA2mSi3Z87ll8RC#scrollTo=Xm5CpLGbMc1r)
+
 A pytorch adaption of the stack neural module network. **not an official repository**, but rather just something whipped up during a student's free time. Code largely copied from the original [snmn repository](https://github.com/ronghanghu/snmn), with the obvious changes made to make use of pytorch and pytorch-lightning.
 
 ## Preparation
