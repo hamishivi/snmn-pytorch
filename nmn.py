@@ -3,7 +3,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from .config import cfg
+from config import cfg
 
 MODULE_INPUT_NUM = {
     '_NoOp': 0,
@@ -32,18 +32,19 @@ MODULE_OUTPUT_NUM = {
 
 class NMN(nn.Module):
     def __init__(self, cfg, module_names):
+        super().__init__()
         # size stuff
         self.cfg = cfg
-        self.N = cfg.BATCH_SIZE
-        self.H = cfg.IMG_HEIGHT
-        self.W = cfg.IMG_WIDTH
+        self.N = cfg.TRAIN.BATCH_SIZE
+        self.H = cfg.MODEL.H_IMG
+        self.W = cfg.MODEL.W_IMG
         self.stack_len = cfg.MODEL.NMN.STACK.LENGTH
         self.att_shape = [self.N, self.H, self.W, 1]
-        self.mem_dim = cfg.MEM_DIM
+        self.mem_dim = cfg.MODEL.NMN.MEM_DIM
         # initial stack, zeros everywhere
         self.att_stack_init = torch.zeros(self.N, self.H, self.W, self.stack_len)
         # initial stack pointer, points to bottom.
-        self.stack_ptr_init = F.one_hot(torch.zeros(self.N), self.stack_len)
+        self.stack_ptr_init = F.one_hot(torch.zeros(self.N).long(), self.stack_len)
         self.mem_init = torch.zeros(self.N, self.mem_dim)
         # zero-outputs that can be easily used by the modules
         self.att_zero = torch.zeros(self.att_shape)
@@ -54,19 +55,19 @@ class NMN(nn.Module):
         self.module_validity_mat = _build_module_validity_mat(module_names, cfg)
         ## module layers
         # find
-        self.find_ci = nn.Linear(cfg.SNMN.DIM, self.KB.DIM)
-        self.find_conv = nn.Conv2d(cfg.KB.DIM, cfg.KB.DIM, 1, 1)
+        self.find_ci = nn.Linear(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM)
+        self.find_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1, 1)
         # transform
-        self.transform_ci = nn.Linear(cfg.SNMN.DIM, self.KB.DIM)
-        self.transform_conv = nn.Conv2d(cfg.KB.DIM, cfg.KB.DIM, 1, 1)
+        self.transform_ci = nn.Linear(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM)
+        self.transform_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1, 1)
         # scene
-        self.scene_conv = nn.Conv2d(cfg.KB.DIM, 1, 1, 1)
+        self.scene_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1, 1)
         # describe one
-        self.describeone_ci = nn.Linear(cfg.SNMN.DIM, self.KB.DIM)
-        self.describeone_mem = nn.Linear(cfg.SNMN.DIM*3, self.MEM.DIM)
+        self.describeone_ci = nn.Linear(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM)
+        self.describeone_mem = nn.Linear(cfg.MODEL.KB_DIM*3, cfg.MODEL.NMN.MEM_DIM)
         # describe two
-        self.describetwo_ci = nn.Linear(cfg.SNMN.DIM, self.KB.DIM)
-        self.describetwo_mem = nn.Linear(cfg.SNMN.DIM*3, self.MEM.DIM)
+        self.describetwo_ci = nn.Linear(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM)
+        self.describetwo_mem = nn.Linear(cfg.MODEL.KB_DIM*3, cfg.MODEL.NMN.MEM_DIM)
         
     def get_init_values(self):
         # the versions of stuff we will use in the forward function.

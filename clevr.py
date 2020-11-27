@@ -17,7 +17,7 @@ class PreprocessedClevr(Dataset):
         # load answer dict
         self.answer_dict = VocabDict(vocab_answer_file)
         self.t_decoder = t_decoder
-        self.layout_doct = VocabDict(vocab_layout_file)
+        self.layout_dict = VocabDict(vocab_layout_file)
         if self.load_gt_layout:
             self.prune_filter_module = prune_filter_module
         # load one feature map to peek its size
@@ -65,6 +65,12 @@ class PreprocessedClevr(Dataset):
         if self.load_gt_layout:
             batch.append(layout_inds)
         return batch
+
+    def get_answer_choices(self):
+        return self.answer_dict.num_vocab
+
+    def get_module_names(self):
+        return self.layout_dict.word_list
 
 def bbox2feat_grid(bbox, stride_H, stride_W, feat_H, feat_W):
     x1, y1, w, h = bbox

@@ -31,6 +31,9 @@ val_dataset = PreprocessedClevr(
     cfg.MODEL.H_FEAT,
     cfg.MODEL.W_FEAT)
 
-model = Model()
+num_choices = train_dataset.get_answer_choices()
+module_names = train_dataset.get_module_names()
+
+model = Model(cfg, num_choices, module_names)
 trainer = pl.Trainer()
 trainer.fit(model, DataLoader(train_dataset), DataLoader(val_dataset))

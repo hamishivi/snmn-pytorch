@@ -1,13 +1,20 @@
 import numpy as np
 import json
 import os
+import re
 
 import sys; sys.path.append('../../')  # NOQA
-from util import text_processing
 
 question_file = './CLEVR_%s_questions_gt_layout.json'
 image_dir = '../clevr_dataset/images/%s/'
 feature_dir = './resnet101_c4/%s/'
+
+_SENTENCE_SPLIT_REGEX = re.compile(r'(\W+)')
+
+def tokenize(sentence):
+    tokens = _SENTENCE_SPLIT_REGEX.split(sentence.lower())
+    tokens = [t.strip() for t in tokens if len(t.strip()) > 0]
+    return tokens
 
 
 def build_imdb(image_set):
@@ -24,7 +31,7 @@ def build_imdb(image_set):
         image_path = os.path.join(abs_image_dir, q['image_filename'])
         feature_path = os.path.join(abs_feature_dir, image_name + '.npy')
         question_str = q['question']
-        question_tokens = text_processing.tokenize(question_str)
+        question_tokens = tokenize(question_str)
         answer = q['answer'] if 'answer' in q else None
         gt_layout_tokens = q['gt_layout'] if 'gt_layout' in q else None
 

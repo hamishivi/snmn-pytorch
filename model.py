@@ -1,41 +1,41 @@
 import torch
 from torch import nn
 from torch.nn import Sequential
-import torch.nn.Functional as F
+import torch.nn.functional as F
 import pytorch_lightning as pl
 
-from .config import cfg
+from config import cfg
 from controller import Controller
 from nmn import NMN
-from . import controller, nmn, input_unit, output_unit, vis
 from utils import pack_and_rnn, get_positional_encoding
 
 class Model(pl.LightningModule):
     """
     Neural Module network, implemented as a lightning module for ease of use
     """
-    def __init__(self, cfg):
+    def __init__(self, cfg, num_choices, module_names):
+        super().__init__()
         self.cfg = cfg
-        self.num_choices = cfg.NUM_CHOICES
-        self.steps = cfg.STEPS
-        self.q_enc = nn.GRU(cfg.QENC.DIM, cfg.SNMN.DIM, bidirectional=True, batch_first=True)
-        self.module_names = ["find"]
-        self.num_module = len(self.module_names)
+        self.num_choices = num_choices
+        self.module_names = module_names
+        self.steps = cfg.MODEL.T_CTRL
+        self.q_enc = nn.GRU(cfg.MODEL.EMBED_DIM, cfg.MODEL.LSTM_DIM//2, bidirectional=True, batch_first=True)
+        self.num_module = len(module_names)
         self.controller = Controller(cfg)
-        self.pe_dim = cfg.pe_dim
+        self.pe_dim = cfg.MODEL.PE_DIM
         self.kb_process = Sequential(
-            nn.Conv2d(cfg.KB.DIM*2, cfg.SNMN.DIM, 1, 1),
+            nn.Conv2d(cfg.MODEL.KB_DIM*2, cfg.MODEL.KB_DIM, 1, 1),
             nn.ELU(),
-            nn.Conv2d(cfg.SNMN.DIM, cfg.SNMN.DIM, 1, 1)
+            nn.Conv2d(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM, 1, 1)
         )
-        self.nmn = NMN(self.module_names)
+        self.nmn = NMN(cfg, self.module_names)
         self.output_unit = Sequential(
-            nn.Linear(cfg.SNMN.DIM*2, cfg.OUTPUT.DIM),
+            nn.Linear(cfg.MODEL.NMN.MEM_DIM + cfg.MODEL.LSTM_DIM, cfg.MODEL.VQA_OUTPUT_DIM),
             nn.ELU(),
-            nn.Linear(cfg.OUTPUT.DIM, self.num_choices)
+            nn.Linear(cfg.MODEL.VQA_OUTPUT_DIM, self.num_choices)
         )
 
-        self.init_ctrl = nn.Parameter(torch.ones(cfg.SNMN.DIM))
+        self.init_ctrl = nn.Parameter(torch.ones(cfg.MODEL.LSTM_DIM))
 
     def forward(self, question, question_mask, image_feats):
         # Input unit - encoding question

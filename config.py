@@ -16,11 +16,11 @@ __C.EXP_NAME = '<fill-with-filename>'
 __C.GPU_ID = 0
 __C.GPU_MEM_GROWTH = True
 
-__C.VOCAB_QUESTION_FILE = './exp_clevr_snmn/data/vocabulary_clevr.txt'
-__C.VOCAB_LAYOUT_FILE = './exp_clevr_snmn/data/vocabulary_layout.txt'
-__C.VOCAB_ANSWER_FILE = './exp_clevr_snmn/data/answers_clevr.txt'
-__C.TRAIN_IMDB_FILE = './exp_clevr_snmn/data/imdb/imdb_train.npy'
-__C.VAL_IMDB_FILE = './exp_clevr_snmn/data/imdb/imdb_val.npy'
+__C.VOCAB_QUESTION_FILE = './clevr_prep/data/vocabulary_clevr.txt'
+__C.VOCAB_LAYOUT_FILE = './clevr_prep/data/vocabulary_layout.txt'
+__C.VOCAB_ANSWER_FILE = './clevr_prep/data/answers_clevr.txt'
+__C.TRAIN_IMDB_FILE = './clevr_prep/data/imdb/imdb_train.npy'
+__C.VAL_IMDB_FILE = './clevr_prep/data/imdb/imdb_val.npy'
 
 __C.USE_FIXED_WORD_EMBED = False
 __C.FIXED_WORD_EMBED_FILE = ''
@@ -102,12 +102,12 @@ __C.TRAIN.BBOX_OFFSET_LOSS_WEIGHT = 1.
 __C.TRAIN.LAYOUT_LOSS_WEIGHT = 1.
 __C.TRAIN.REC_LOSS_WEIGHT = 1.
 
-__C.TRAIN.SNAPSHOT_DIR = './exp_clevr_snmn/tfmodel/%s/'
+__C.TRAIN.SNAPSHOT_DIR = './clevr_prep/tfmodel/%s/'
 __C.TRAIN.SNAPSHOT_INTERVAL = 10000
 __C.TRAIN.INIT_FROM_WEIGHTS = False
 __C.TRAIN.INIT_WEIGHTS_FILE = ''
 __C.TRAIN.MAX_ITER = 400000
-__C.TRAIN.LOG_DIR = './exp_clevr_snmn/tb/%s/'
+__C.TRAIN.LOG_DIR = './clevr_prep/tb/%s/'
 __C.TRAIN.LOG_INTERVAL = 20
 
 __C.TRAIN.BBOX_IOU_THRESH = .5
@@ -128,10 +128,10 @@ __C.TEST.BATCH_SIZE = 64
 __C.TEST.USE_EMA = True
 __C.TEST.SPLIT_VQA = 'val'
 __C.TEST.SPLIT_LOC = 'loc_val'
-__C.TEST.SNAPSHOT_FILE = './exp_clevr_snmn/tfmodel/%s/%08d'
+__C.TEST.SNAPSHOT_FILE = './clevr_prep/tfmodel/%s/%08d'
 __C.TEST.ITER = -1  # Needs to be supplied
 
-__C.TEST.RESULT_DIR = './exp_clevr_snmn/results/%s/%08d'
+__C.TEST.RESULT_DIR = './clevr_prep/results/%s/%08d'
 __C.TEST.OUTPUT_VQA_EVAL_PRED = True
 __C.TEST.VIS_SEPARATE_CORRECTNESS = False
 __C.TEST.NUM_VIS = 100

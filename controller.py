@@ -1,5 +1,5 @@
 import torch
-import torch.nn.Functional as F
+import torch.nn.functional as F
 import torch.nn as nn
 from nn_utils import linear
 
@@ -12,22 +12,21 @@ class Controller(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.num_modules = 3
+        dim = cfg.MODEL.LSTM_DIM
 
-        self.shared_control_proj = linear(cfg.MAC.DIM, cfg.MAC.DIM)
+        self.shared_control_proj = linear(dim, dim)
         self.position_aware = nn.ModuleList()
-        for i in range(cfg.MAC.MAX_ITER):
-            self.position_aware.append(linear(cfg.MAC.DIM, cfg.MAC.DIM))
+        for i in range(cfg.MODEL.T_CTRL):
+            self.position_aware.append(linear(dim, dim))
 
-        self.control_question = linear(cfg.MAC.DIM * 2, cfg.MAC.DIM)
-        self.attn = linear(cfg.MAC.DIM, 1)
+        self.control_question = linear(dim * 2, dim)
+        self.attn = linear(dim, 1)
 
         self.module_fc = nn.Sequential(
-            nn.Linear(cfg.MAC.DIM, cfg.MAC.DIM),
+            nn.Linear(dim, dim),
             nn.ELU(),
-            nn.Linear(cfg.MAC.DIM, self.num_modules)
+            nn.Linear(dim, self.num_modules)
         )
-
-        self.dim = cfg.MAC.DIM
 
     def forward(self, context, question, control, question_mask, step):
         question = torch.tanh(self.shared_control_proj(question))
