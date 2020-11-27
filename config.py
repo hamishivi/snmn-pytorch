@@ -12,18 +12,18 @@ cfg = __C
 # --------------------------------------------------------------------------- #
 # general options
 # --------------------------------------------------------------------------- #
-__C.EXP_NAME = '<fill-with-filename>'
+__C.EXP_NAME = "<fill-with-filename>"
 __C.GPU_ID = 0
 __C.GPU_MEM_GROWTH = True
 
-__C.VOCAB_QUESTION_FILE = './clevr_prep/data/vocabulary_clevr.txt'
-__C.VOCAB_LAYOUT_FILE = './clevr_prep/data/vocabulary_layout.txt'
-__C.VOCAB_ANSWER_FILE = './clevr_prep/data/answers_clevr.txt'
-__C.TRAIN_IMDB_FILE = './clevr_prep/data/imdb/imdb_train.npy'
-__C.VAL_IMDB_FILE = './clevr_prep/data/imdb/imdb_val.npy'
+__C.VOCAB_QUESTION_FILE = "./clevr_prep/data/vocabulary_clevr.txt"
+__C.VOCAB_LAYOUT_FILE = "./clevr_prep/data/vocabulary_layout.txt"
+__C.VOCAB_ANSWER_FILE = "./clevr_prep/data/answers_clevr.txt"
+__C.TRAIN_IMDB_FILE = "./clevr_prep/data/imdb/imdb_train.npy"
+__C.VAL_IMDB_FILE = "./clevr_prep/data/imdb/imdb_val.npy"
 
 __C.USE_FIXED_WORD_EMBED = False
-__C.FIXED_WORD_EMBED_FILE = ''
+__C.FIXED_WORD_EMBED_FILE = ""
 
 # --------------------------------------------------------------------------- #
 # model options
@@ -83,8 +83,8 @@ __C.MODEL.REC.USE_TXT_ATT = True
 # training options
 # --------------------------------------------------------------------------- #
 __C.TRAIN = AttrDict()
-__C.TRAIN.SPLIT_VQA = 'train'
-__C.TRAIN.SPLIT_LOC = 'loc_train'
+__C.TRAIN.SPLIT_VQA = "train"
+__C.TRAIN.SPLIT_LOC = "loc_train"
 __C.TRAIN.BATCH_SIZE = 64
 __C.TRAIN.USE_GT_LAYOUT = True
 __C.TRAIN.WEIGHT_DECAY = 1e-5
@@ -94,29 +94,29 @@ __C.TRAIN.SOLVER.LR = 1e-4
 __C.TRAIN.EMA_DECAY = 0.999
 __C.TRAIN.START_ITER = 0
 __C.TRAIN.CLIP_GRADIENTS = True
-__C.TRAIN.GRAD_MAX_NORM = 8.
+__C.TRAIN.GRAD_MAX_NORM = 8.0
 
-__C.TRAIN.VQA_LOSS_WEIGHT = 1.
-__C.TRAIN.BBOX_IND_LOSS_WEIGHT = 1.
-__C.TRAIN.BBOX_OFFSET_LOSS_WEIGHT = 1.
-__C.TRAIN.LAYOUT_LOSS_WEIGHT = 1.
-__C.TRAIN.REC_LOSS_WEIGHT = 1.
+__C.TRAIN.VQA_LOSS_WEIGHT = 1.0
+__C.TRAIN.BBOX_IND_LOSS_WEIGHT = 1.0
+__C.TRAIN.BBOX_OFFSET_LOSS_WEIGHT = 1.0
+__C.TRAIN.LAYOUT_LOSS_WEIGHT = 1.0
+__C.TRAIN.REC_LOSS_WEIGHT = 1.0
 
-__C.TRAIN.SNAPSHOT_DIR = './clevr_prep/tfmodel/%s/'
+__C.TRAIN.SNAPSHOT_DIR = "./clevr_prep/tfmodel/%s/"
 __C.TRAIN.SNAPSHOT_INTERVAL = 10000
 __C.TRAIN.INIT_FROM_WEIGHTS = False
-__C.TRAIN.INIT_WEIGHTS_FILE = ''
+__C.TRAIN.INIT_WEIGHTS_FILE = ""
 __C.TRAIN.MAX_ITER = 400000
-__C.TRAIN.LOG_DIR = './clevr_prep/tb/%s/'
+__C.TRAIN.LOG_DIR = "./clevr_prep/tb/%s/"
 __C.TRAIN.LOG_INTERVAL = 20
 
-__C.TRAIN.BBOX_IOU_THRESH = .5
+__C.TRAIN.BBOX_IOU_THRESH = 0.5
 
 __C.TRAIN.USE_SHARPEN_LOSS = False
-__C.TRAIN.SHARPEN_LOSS_TYPE = 'entropy'
+__C.TRAIN.SHARPEN_LOSS_TYPE = "entropy"
 __C.TRAIN.SHARPEN_LOSS_WEIGHT = 1e-5
-__C.TRAIN.SHARPEN_LOSS_SCALING_TYPE = 'warmup_scaling'
-__C.TRAIN.SHARPEN_LOSS_SCALING_FUNC = ''
+__C.TRAIN.SHARPEN_LOSS_SCALING_TYPE = "warmup_scaling"
+__C.TRAIN.SHARPEN_LOSS_SCALING_FUNC = ""
 __C.TRAIN.SHARPEN_SCHEDULE_BEGIN = 500
 __C.TRAIN.SHARPEN_SCHEDULE_END = 10000
 
@@ -126,24 +126,24 @@ __C.TRAIN.SHARPEN_SCHEDULE_END = 10000
 __C.TEST = AttrDict()
 __C.TEST.BATCH_SIZE = 64
 __C.TEST.USE_EMA = True
-__C.TEST.SPLIT_VQA = 'val'
-__C.TEST.SPLIT_LOC = 'loc_val'
-__C.TEST.SNAPSHOT_FILE = './clevr_prep/tfmodel/%s/%08d'
+__C.TEST.SPLIT_VQA = "val"
+__C.TEST.SPLIT_LOC = "loc_val"
+__C.TEST.SNAPSHOT_FILE = "./clevr_prep/tfmodel/%s/%08d"
 __C.TEST.ITER = -1  # Needs to be supplied
 
-__C.TEST.RESULT_DIR = './clevr_prep/results/%s/%08d'
+__C.TEST.RESULT_DIR = "./clevr_prep/results/%s/%08d"
 __C.TEST.OUTPUT_VQA_EVAL_PRED = True
 __C.TEST.VIS_SEPARATE_CORRECTNESS = False
 __C.TEST.NUM_VIS = 100
 __C.TEST.NUM_VIS_CORRECT = 50
 __C.TEST.NUM_VIS_INCORRECT = 50
-__C.TEST.VIS_DIR_PREFIX = 'vis'
+__C.TEST.VIS_DIR_PREFIX = "vis"
 __C.TEST.STEPWISE_VIS = True  # Use the (new) stepwise visualization
 __C.TEST.VIS_SHOW_ANSWER = True
 __C.TEST.VIS_SHOW_STACK = True
 __C.TEST.VIS_SHOW_IMG = True
 
-__C.TEST.BBOX_IOU_THRESH = .5
+__C.TEST.BBOX_IOU_THRESH = 0.5
 
 # --------------------------------------------------------------------------- #
 # post-processing configs after loading
@@ -151,14 +151,15 @@ __C.TEST.BBOX_IOU_THRESH = .5
 def _postprocess_cfg():  # NoQA
     pass
 
+
 # --------------------------------------------------------------------------- #
 
 
 def build_cfg_from_argparse(args_list=None):
     """Load config with command line options (`--cfg` and a list of options)"""
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', default='')
-    parser.add_argument('opts', default=None, nargs=argparse.REMAINDER)
+    parser.add_argument("--cfg", default="")
+    parser.add_argument("opts", default=None, nargs=argparse.REMAINDER)
     args = parser.parse_args(args_list)
     if args.cfg:
         _merge_cfg_from_file(args.cfg)
@@ -170,12 +171,12 @@ def build_cfg_from_argparse(args_list=None):
 
 def _merge_cfg_from_file(cfg_filename):
     """Load a yaml config file and merge it into the global config."""
-    with open(cfg_filename, 'r') as f:
+    with open(cfg_filename, "r") as f:
         yaml_cfg = yaml.load(f)
     if yaml_cfg is not None:
         _merge_a_into_b(AttrDict(yaml_cfg), __C)
-    if __C.EXP_NAME == '<fill-with-filename>':
-        __C.EXP_NAME = os.path.basename(cfg_filename).replace('.yaml', '')
+    if __C.EXP_NAME == "<fill-with-filename>":
+        __C.EXP_NAME = os.path.basename(cfg_filename).replace(".yaml", "")
 
 
 def _merge_cfg_from_cfg(cfg_other):
@@ -189,17 +190,15 @@ def _merge_cfg_from_list(cfg_list):
     """
     assert len(cfg_list) % 2 == 0
     for full_key, v in zip(cfg_list[0::2], cfg_list[1::2]):
-        key_list = full_key.split('.')
+        key_list = full_key.split(".")
         d = __C
         for subkey in key_list[:-1]:
-            assert subkey in d, 'Non-existent key: {}'.format(full_key)
+            assert subkey in d, "Non-existent key: {}".format(full_key)
             d = d[subkey]
         subkey = key_list[-1]
-        assert subkey in d, 'Non-existent key: {}'.format(full_key)
+        assert subkey in d, "Non-existent key: {}".format(full_key)
         value = _decode_cfg_value(v)
-        value = _check_and_coerce_cfg_value_type(
-            value, d[subkey], subkey, full_key
-        )
+        value = _check_and_coerce_cfg_value_type(value, d[subkey], subkey, full_key)
         d[subkey] = value
 
 
@@ -207,14 +206,14 @@ def _merge_a_into_b(a, b, stack=None):
     """Merge config dictionary a into config dictionary b, clobbering the
     options in b whenever they are also specified in a.
     """
-    assert isinstance(a, AttrDict), 'Argument `a` must be an AttrDict'
-    assert isinstance(b, AttrDict), 'Argument `b` must be an AttrDict'
+    assert isinstance(a, AttrDict), "Argument `a` must be an AttrDict"
+    assert isinstance(b, AttrDict), "Argument `b` must be an AttrDict"
 
     for k, v_ in a.items():
-        full_key = '.'.join(stack) + '.' + k if stack is not None else k
+        full_key = ".".join(stack) + "." + k if stack is not None else k
         # a must specify keys that are in b
         if k not in b:
-            raise KeyError('Non-existent config key: {}'.format(full_key))
+            raise KeyError("Non-existent config key: {}".format(full_key))
 
         v = copy.deepcopy(v_)
         v = _decode_cfg_value(v)
@@ -286,7 +285,7 @@ def _check_and_coerce_cfg_value_type(value_a, value_b, key, full_key):
         value_a = tuple(value_a)
     else:
         raise ValueError(
-            'Type mismatch ({} vs. {}) with values ({} vs. {}) for config '
-            'key: {}'.format(type_b, type_a, value_b, value_a, full_key)
+            "Type mismatch ({} vs. {}) with values ({} vs. {}) for config "
+            "key: {}".format(type_b, type_a, value_b, value_a, full_key)
         )
     return value_a

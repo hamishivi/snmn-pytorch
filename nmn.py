@@ -3,30 +3,28 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from config import cfg
-
 MODULE_INPUT_NUM = {
-    '_NoOp': 0,
-    '_Find': 0,
-    '_Transform': 1,
-    '_Filter': 1,
-    '_And': 2,
-    '_Or': 2,
-    '_Scene': 0,
-    '_DescribeOne': 1,
-    '_DescribeTwo': 2,
+    "_NoOp": 0,
+    "_Find": 0,
+    "_Transform": 1,
+    "_Filter": 1,
+    "_And": 2,
+    "_Or": 2,
+    "_Scene": 0,
+    "_DescribeOne": 1,
+    "_DescribeTwo": 2,
 }
 
 MODULE_OUTPUT_NUM = {
-    '_NoOp': 0,
-    '_Find': 1,
-    '_Transform': 1,
-    '_Filter': 1,
-    '_And': 1,
-    '_Or': 1,
-    '_Scene': 1,
-    '_DescribeOne': 1,
-    '_DescribeTwo': 1,
+    "_NoOp": 0,
+    "_Find": 1,
+    "_Transform": 1,
+    "_Filter": 1,
+    "_And": 1,
+    "_Or": 1,
+    "_Scene": 1,
+    "_DescribeOne": 1,
+    "_DescribeTwo": 1,
 }
 
 
@@ -64,21 +62,34 @@ class NMN(nn.Module):
         self.scene_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1, 1)
         # describe one
         self.describeone_ci = nn.Linear(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM)
-        self.describeone_mem = nn.Linear(cfg.MODEL.KB_DIM*3, cfg.MODEL.NMN.MEM_DIM)
+        self.describeone_mem = nn.Linear(cfg.MODEL.KB_DIM * 3, cfg.MODEL.NMN.MEM_DIM)
         # describe two
         self.describetwo_ci = nn.Linear(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM)
-        self.describetwo_mem = nn.Linear(cfg.MODEL.KB_DIM*3, cfg.MODEL.NMN.MEM_DIM)
-        
+        self.describetwo_mem = nn.Linear(cfg.MODEL.KB_DIM * 3, cfg.MODEL.NMN.MEM_DIM)
+
     def get_init_values(self):
         # the versions of stuff we will use in the forward function.
         return self.att_stack_init, self.stack_ptr_init, self.mem_init
-    
-    def forward(self, control_state, kb_batch, module_prob, mem_prev, att_stack_prev, stack_ptr_prev):
+
+    def forward(
+        self,
+        control_state,
+        kb_batch,
+        module_prob,
+        mem_prev,
+        att_stack_prev,
+        stack_ptr_prev,
+    ):
         # run all the modules, and average their results wrt module_w
-        res = [f(kb_batch, att_stack_prev, stack_ptr_prev, mem_prev, control_state) for f in self.module_funcs]
+        res = [
+            f(kb_batch, att_stack_prev, stack_ptr_prev, mem_prev, control_state)
+            for f in self.module_funcs
+        ]
         att_stack_avg = (module_prob * torch.stack([r[0] for r in res], 3)).sum(-1)
         # avg stack pointer and ongoing mem
-        stack_ptr_avg = _sharpen_ptr(module_prob * torch.stack([r[1] for r in res], 3), self.cfg).sum(-1)
+        stack_ptr_avg = _sharpen_ptr(
+            module_prob * torch.stack([r[1] for r in res], 3), self.cfg
+        ).sum(-1)
         mem_avg = (module_prob * torch.stack([r[1] for r in res], 3)).sum(-1)
         return att_stack_avg, stack_ptr_avg, mem_avg
 
@@ -133,9 +144,13 @@ class NMN(nn.Module):
         Combo of Find + And. First run Find, and then run And.
         """
         # Run Find module
-        att_stack, stack_ptr, _ = self.Find(kb_batch, att_stack, stack_ptr, mem_in, control_state)
+        att_stack, stack_ptr, _ = self.Find(
+            kb_batch, att_stack, stack_ptr, mem_in, control_state
+        )
         # Run And module
-        att_stack, stack_ptr, _ = self.And(kb_batch, att_stack, stack_ptr, mem_in, control_state)
+        att_stack, stack_ptr, _ = self.And(
+            kb_batch, att_stack, stack_ptr, mem_in, control_state
+        )
 
         return att_stack, stack_ptr, self.mem_zero
 
@@ -197,7 +212,9 @@ class NMN(nn.Module):
         c_mapped = self.describeone_ci(control_state)
         kb_att_in = _extract_softmax_avg(self.kb_batch, att_in)
         elt_prod = F.normalize(c_mapped * kb_att_in, dim=-1, p=2)
-        mem_out = self.describeone_mem(torch.cat([control_state, mem_in, elt_prod], axis=1))
+        mem_out = self.describeone_mem(
+            torch.cat([control_state, mem_in, elt_prod], axis=1)
+        )
         # Push to stack
         att_stack = _write_to_stack(att_stack, stack_ptr, self.att_zero)
 
@@ -220,7 +237,9 @@ class NMN(nn.Module):
         kb_att_in_1 = _extract_softmax_avg(self.kb_batch, att_in_1)
         kb_att_in_2 = _extract_softmax_avg(self.kb_batch, att_in_2)
         elt_prod = F.normalize(c_mapped * kb_att_in_1 * kb_att_in_2, dim=-1, p=2)
-        mem_out = self.describetwo_mem(torch.cat([control_state, mem_in, elt_prod], dim=1))
+        mem_out = self.describetwo_mem(
+            torch.cat([control_state, mem_in, elt_prod], dim=1)
+        )
         # Push to stack
         att_stack = _write_to_stack(att_stack, stack_ptr, self.att_zero)
 
@@ -243,6 +262,7 @@ def _move_ptr_bw(stack_ptr):
     filter_bw = torch.tensor([0, 0, 1])
     new_stack_ptr = F.conv1d(stack_ptr, filter_bw).squeeze(2)
     return new_stack_ptr
+
 
 def _read_from_stack(att_stack, stack_ptr):
     """
@@ -275,18 +295,21 @@ def _sharpen_ptr(stack_ptr, cfg):
     else:
         # soft (differentiable) sharpening with softmax
         temperature = cfg.MODEL.NMN.STACK.SOFT_SHARPEN_TEMP
-        new_stack_ptr = F.softmax(stack_ptr / temperature, 1) # todo: check dim here
+        new_stack_ptr = F.softmax(stack_ptr / temperature, 1)  # todo: check dim here
     return new_stack_ptr
+
 
 def _spatial_softmax(att_raw):
     N = att_raw.size(0)
     att_softmax = F.softmax(att_raw.view(N, -1), axis=1)
-    att_softmax = att_softmax.view(att_raw.size()) # idk if this is legit torch...
+    att_softmax = att_softmax.view(att_raw.size())  # idk if this is legit torch...
     return att_softmax
+
 
 def _extract_softmax_avg(kb_batch, att_raw):
     att_softmax = _spatial_softmax(att_raw)
     return (kb_batch * att_softmax).sum([1, 2])
+
 
 def _build_module_validity_mat(module_names, cfg):
     """
@@ -307,8 +330,7 @@ def _build_module_validity_mat(module_names, cfg):
         min_ptr_pos = MODULE_INPUT_NUM[m]
         # the stack ptr diff=(MODULE_OUTPUT_NUM[m] - MODULE_INPUT_NUM[m])
         # ensure that ptr + diff <= stack_len - 1 (stack top)
-        max_ptr_pos = (
-            stack_len - 1 + MODULE_INPUT_NUM[m] - MODULE_OUTPUT_NUM[m])
-        module_validity_mat[min_ptr_pos:max_ptr_pos+1, n_m] = 1.
+        max_ptr_pos = stack_len - 1 + MODULE_INPUT_NUM[m] - MODULE_OUTPUT_NUM[m]
+        module_validity_mat[min_ptr_pos : max_ptr_pos + 1, n_m] = 1.0
 
     return module_validity_mat

@@ -3,11 +3,13 @@ import torch.nn.functional as F
 import torch.nn as nn
 from nn_utils import linear
 
+
 class Controller(nn.Module):
     """
     Controller that decides which modules to use and maintains control state.
     Essentially same as MAC control unit.
     """
+
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
@@ -23,9 +25,7 @@ class Controller(nn.Module):
         self.attn = linear(dim, 1)
 
         self.module_fc = nn.Sequential(
-            nn.Linear(dim, dim),
-            nn.ELU(),
-            nn.Linear(dim, self.num_modules)
+            nn.Linear(dim, dim), nn.ELU(), nn.Linear(dim, self.num_modules)
         )
 
     def forward(self, context, question, control, question_mask, step):
