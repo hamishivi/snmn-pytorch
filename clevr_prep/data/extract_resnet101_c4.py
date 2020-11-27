@@ -7,7 +7,9 @@ import skimage.transform
 import numpy as np
 import tensorflow as tf
 
-from util.nets import resnet_v1, channel_mean
+from . import resnet_v1
+
+channel_mean = np.array([123.68, 116.779, 103.939], dtype=np.float32)
 
 
 parser = argparse.ArgumentParser()

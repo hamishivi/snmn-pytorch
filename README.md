@@ -1,6 +1,6 @@
 # SNMN-pytorch
 
-A pytorch adaption of the stack neural module network. **not an official repository**, but rather just something whipped up during a student's free time.
+A pytorch adaption of the stack neural module network. **not an official repository**, but rather just something whipped up during a student's free time. Code largely copied from the original [snmn repository](https://github.com/ronghanghu/snmn), with the obvious changes made to make use of pytorch and pytorch-lightning.
 
 ## Preparation
 
