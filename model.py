@@ -6,7 +6,12 @@ import pytorch_lightning as pl
 
 from controller import Controller
 from nmn import NMN
-from utils import pack_and_rnn, get_positional_encoding, sequence_mask
+from utils import (
+    pack_and_rnn,
+    get_positional_encoding,
+    sequence_mask,
+    channels_last_conv,
+)
 
 
 class Model(pl.LightningModule):
@@ -59,10 +64,8 @@ class Model(pl.LightningModule):
         position_encoding = torch.tensor(
             position_encoding, device=image_feats.device
         ).repeat(image_feats.size(0), 1, 1, 1)
-        kb_batch = (
-            torch.cat([image_feats, position_encoding], 3).permute([0, 3, 1, 2]).float()
-        )
-        kb_batch = self.kb_process(kb_batch)
+        kb_batch = torch.cat([image_feats, position_encoding], 3)
+        kb_batch = channels_last_conv(kb_batch, self.kb_process)
         # init values
         control = self.init_ctrl.unsqueeze(0).repeat(image_feats.size(0), 1)
         mem, att_stack, stack_ptr = self.nmn.get_init_values()

@@ -3,6 +3,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from utils import channels_last_conv
+
 MODULE_INPUT_NUM = {
     "_NoOp": 0,
     "_Find": 0,
@@ -114,7 +116,7 @@ class NMN(nn.Module):
         """
         c_mapped = self.find_ci(control_state)
         elt_prod = F.normalize(kb_batch * c_mapped, dim=-1, p=2)
-        att_out = self.find_conv(elt_prod)
+        att_out = channels_last_conv(elt_prod, self.find_conv)
         # Push to stack
         stack_ptr = _move_ptr_fw(stack_ptr)
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
@@ -134,7 +136,7 @@ class NMN(nn.Module):
         c_mapped = self.transform_ci(control_state)
         kb_att_in = _extract_softmax_avg(self.kb_batch, att_in)
         elt_prod = F.normalize(kb_batch * c_mapped * kb_att_in, dim=-1, p=2)
-        att_out = self.transform_conv(elt_prod)
+        att_out = channels_last_conv(elt_prod, self.transform_conv)
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
 
         return att_stack, stack_ptr, self.mem_zero
@@ -191,7 +193,9 @@ class NMN(nn.Module):
         Output an attention map that looks at all the objects.
         1) 1x1 convolution on KB to get attention logits
         """
-        att_out = self.scene_conv(F.normalize(kb_batch, dim=-1, p=2))
+        att_out = channels_last_conv(
+            F.normalize(kb_batch, dim=-1, p=2), self.scene_conv
+        )
         # Push to stack
         stack_ptr = _move_ptr_fw(stack_ptr)
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
@@ -251,7 +255,9 @@ def _move_ptr_fw(stack_ptr):
     Move the stack pointer forward (i.e. to push to stack).
     """
     filter_fw = torch.tensor([1, 0, 0])
-    new_stack_ptr = F.conv1d(stack_ptr, filter_fw).squeeze(2)
+    new_stack_ptr = channels_last_conv(
+        stack_ptr, lambda x: F.conv1d(x, filter_fw).squeeze(2)
+    )
     return new_stack_ptr
 
 
@@ -260,7 +266,9 @@ def _move_ptr_bw(stack_ptr):
     Move the stack pointer backward (i.e. to pop from stack).
     """
     filter_bw = torch.tensor([0, 0, 1])
-    new_stack_ptr = F.conv1d(stack_ptr, filter_bw).squeeze(2)
+    new_stack_ptr = channels_last_conv(
+        stack_ptr, lambda x: F.conv1d(x, filter_bw).squeeze(2)
+    )
     return new_stack_ptr
 
 

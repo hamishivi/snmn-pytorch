@@ -80,3 +80,11 @@ def sequence_mask(lengths, maxlen=None, dtype=torch.long):
     mask = row_vector < matrix
     mask.type(dtype)
     return mask.long()
+
+
+# pytorch doesnt have a channels last conv option, as far as I can see.
+# so this is a little wrapper func (since im lazy and dont want to rewrite
+# all my code to be channels-first).
+def channels_last_conv(input, fn):
+    output = fn(input.permute([0, 3, 1, 2]))
+    return output.permute([0, 2, 3, 1])
