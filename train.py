@@ -35,7 +35,12 @@ val_dataset = PreprocessedClevr(
 
 num_choices = train_dataset.get_answer_choices()
 module_names = train_dataset.get_module_names()
+vocab_size = train_dataset.get_vocab_size()
 
-model = Model(cfg, num_choices, module_names)
-trainer = pl.Trainer()
-trainer.fit(model, DataLoader(train_dataset), DataLoader(val_dataset))
+model = Model(cfg, num_choices, module_names, vocab_size)
+trainer = pl.Trainer(gpus=1)
+trainer.fit(
+    model,
+    DataLoader(train_dataset, batch_size=8),
+    DataLoader(val_dataset, batch_size=8),
+)

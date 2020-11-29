@@ -6,7 +6,7 @@ import pytorch_lightning as pl
 
 from controller import Controller
 from nmn import NMN
-from utils import pack_and_rnn, get_positional_encoding
+from utils import pack_and_rnn, get_positional_encoding, sequence_mask
 
 
 class Model(pl.LightningModule):
@@ -14,13 +14,14 @@ class Model(pl.LightningModule):
     Neural Module network, implemented as a lightning module for ease of use
     """
 
-    def __init__(self, cfg, num_choices, module_names):
+    def __init__(self, cfg, num_choices, module_names, num_vocab):
         super().__init__()
         self.cfg = cfg
         self.num_choices = num_choices
         self.module_names = module_names
         self.steps = cfg.MODEL.T_CTRL
-        self.q_enc = nn.GRU(
+        self.q_embed = nn.Embedding(num_vocab, cfg.MODEL.EMBED_DIM)
+        self.q_enc = nn.LSTM(
             cfg.MODEL.EMBED_DIM,
             cfg.MODEL.LSTM_DIM // 2,
             bidirectional=True,
@@ -30,7 +31,7 @@ class Model(pl.LightningModule):
         self.controller = Controller(cfg)
         self.pe_dim = cfg.MODEL.PE_DIM
         self.kb_process = Sequential(
-            nn.Conv2d(cfg.MODEL.KB_DIM * 2, cfg.MODEL.KB_DIM, 1, 1),
+            nn.Conv2d(cfg.MODEL.KB_DIM * 2 + cfg.MODEL.PE_DIM, cfg.MODEL.KB_DIM, 1, 1),
             nn.ELU(),
             nn.Conv2d(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM, 1, 1),
         )
@@ -47,7 +48,7 @@ class Model(pl.LightningModule):
 
     def forward(self, question, question_mask, image_feats):
         # Input unit - encoding question
-        # todo: question embedding
+        question = self.q_embed(question)
         lstm_seq, (h, _) = pack_and_rnn(question, question_mask.sum(1), self.q_enc)
         q_vec = torch.cat([h[0], h[1]], -1)
         # Process kb
@@ -58,25 +59,37 @@ class Model(pl.LightningModule):
         position_encoding = torch.tensor(
             position_encoding, device=image_feats.device
         ).repeat(image_feats.size(0), 1, 1, 1)
-        kb_batch = self.kb_process(torch.cat([image_feats, position_encoding], 3))
+        kb_batch = (
+            torch.cat([image_feats, position_encoding], 3).permute([0, 3, 1, 2]).float()
+        )
+        kb_batch = self.kb_process(kb_batch)
         # init values
         control = self.init_ctrl.unsqueeze(0).repeat(image_feats.size(0), 1)
         mem, att_stack, stack_ptr = self.nmn.get_init_values()
+        module_logits = []
         for i in range(self.steps):
             # Controller and NMN
             control, module_probs = self.controller(
                 lstm_seq, q_vec, control, question_mask, i
             )
+            module_logits.append(module_probs)
             mem, att_stack, stack_ptr = self.nmn(
                 control, kb_batch, module_probs, mem, att_stack, stack_ptr
             )
         # output - two layer FC
         output_logits = self.output_unit(torch.cat([q_vec, mem], 1))
-        return output_logits
+        return output_logits, module_logits
 
     def training_step(self, batch, batch_idx):
-        output_logits = self.forward(batch[0], batch[1], batch[2])
-        loss = F.cross_entropy(output_logits, batch[3])
+        question_inds, seq_length, image_feat, image_path, answer_idx, layout_inds = (
+            batch
+        )
+        question_mask = sequence_mask(seq_length)
+        output_logits, module_logits = self.forward(
+            question_inds, question_mask, image_feat
+        )
+        loss = F.cross_entropy(output_logits, answer_idx)
+        loss += self.sharpen_loss(module_logits)
         return loss
 
     def configure_optimizers(self):

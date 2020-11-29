@@ -1,6 +1,7 @@
 """
 DataLoader class for CLEVR used in training.
 """
+import torch
 from torch.utils.data import Dataset
 from utils import VocabDict
 import numpy as np
@@ -77,15 +78,20 @@ class PreprocessedClevr(Dataset):
                 gt_layout_tokens = [t for t in gt_layout_tokens if t]
             layout_inds = [self.layout_dict.word2idx(w) for w in gt_layout_tokens]
 
-        batch = [question_inds, seq_length, image_feat, image_path]
+        batch = [
+            torch.tensor(question_inds),
+            torch.tensor(seq_length),
+            torch.tensor(image_feat).squeeze(0),
+            image_path,
+        ]
         if self.load_answer:
-            batch.append(answer_idx)
+            batch.append(torch.tensor(answer_idx))
         if self.load_bbox:
-            batch.append(bbox_batch)
-            batch.append(bbox_ind)
-            batch.append(bbox_offset)
+            batch.append(torch.tensor(bbox_batch))
+            batch.append(torch.tensor(bbox_ind))
+            batch.append(torch.tensor(bbox_offset))
         if self.load_gt_layout:
-            batch.append(layout_inds)
+            batch.append(torch.tensor(layout_inds))
         return batch
 
     def get_answer_choices(self):
@@ -93,6 +99,9 @@ class PreprocessedClevr(Dataset):
 
     def get_module_names(self):
         return self.layout_dict.word_list
+
+    def get_vocab_size(self):
+        return self.vocab_dict.num_vocab
 
 
 def bbox2feat_grid(bbox, stride_H, stride_W, feat_H, feat_W):

@@ -11,8 +11,8 @@ def pack_and_rnn(data, data_len, fn):
     embed = torch.nn.utils.rnn.pack_padded_sequence(
         data, data_len.cpu(), batch_first=True, enforce_sorted=False
     )
-    out = fn(embed)[0]
-    return torch.nn.utils.rnn.pad_packed_sequence(out, batch_first=True)
+    out = fn(embed)
+    return torch.nn.utils.rnn.pad_packed_sequence(out[0], batch_first=True)[0], out[1]
 
 
 def get_positional_encoding(H, W, pe_dim):
@@ -70,3 +70,13 @@ class VocabDict:
     def tokenize_and_index(self, sentence):
         inds = [self.word2idx(w) for w in tokenize(sentence)]
         return inds
+
+
+def sequence_mask(lengths, maxlen=None, dtype=torch.long):
+    if maxlen is None:
+        maxlen = lengths.max()
+    row_vector = torch.arange(0, maxlen, 1)
+    matrix = torch.unsqueeze(lengths, dim=-1)
+    mask = row_vector < matrix
+    mask.type(dtype)
+    return mask.long()
