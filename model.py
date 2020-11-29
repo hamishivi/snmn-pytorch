@@ -33,7 +33,7 @@ class Model(pl.LightningModule):
             batch_first=True,
         )
         self.num_module = len(module_names)
-        self.controller = Controller(cfg)
+        self.controller = Controller(cfg, self.num_module)
         self.pe_dim = cfg.MODEL.PE_DIM
         self.kb_process = Sequential(
             nn.Conv2d(cfg.MODEL.KB_DIM * 2 + cfg.MODEL.PE_DIM, cfg.MODEL.KB_DIM, 1, 1),
@@ -59,7 +59,7 @@ class Model(pl.LightningModule):
         # Process kb
         position_encoding = get_positional_encoding(
             image_feats.size(1), image_feats.size(2), self.pe_dim
-        )
+        ).float()
         # convert to tensor and tile along batch dim
         position_encoding = torch.tensor(
             position_encoding, device=image_feats.device
@@ -68,7 +68,12 @@ class Model(pl.LightningModule):
         kb_batch = channels_last_conv(kb_batch, self.kb_process)
         # init values
         control = self.init_ctrl.unsqueeze(0).repeat(image_feats.size(0), 1)
-        mem, att_stack, stack_ptr = self.nmn.get_init_values()
+        att_stack, stack_ptr, mem = self.nmn.get_init_values()
+        att_stack, stack_ptr, mem = (
+            att_stack.to(q_vec.device),
+            stack_ptr.to(q_vec.device),
+            mem.to(q_vec.device),
+        )
         module_logits = []
         for i in range(self.steps):
             # Controller and NMN
@@ -76,17 +81,18 @@ class Model(pl.LightningModule):
                 lstm_seq, q_vec, control, question_mask, i
             )
             module_logits.append(module_probs)
-            mem, att_stack, stack_ptr = self.nmn(
+            att_stack, stack_ptr, mem = self.nmn(
                 control, kb_batch, module_probs, mem, att_stack, stack_ptr
             )
         # output - two layer FC
         output_logits = self.output_unit(torch.cat([q_vec, mem], 1))
-        return output_logits, module_logits
+        return output_logits, torch.stack(module_logits)
 
     def training_step(self, batch, batch_idx):
-        question_inds, seq_length, image_feat, image_path, answer_idx, layout_inds = (
-            batch
-        )
+        question_inds = batch["question_inds"]
+        seq_length = batch["seq_length"]
+        image_feat = batch["image_feat"]
+        answer_idx = batch["answer_idx"]
         question_mask = sequence_mask(seq_length)
         output_logits, module_logits = self.forward(
             question_inds, question_mask, image_feat
@@ -95,8 +101,29 @@ class Model(pl.LightningModule):
         loss += self.sharpen_loss(module_logits)
         return loss
 
+    def validation_step(self, batch, batch_idx):
+        question_inds = batch["question_inds"]
+        seq_length = batch["seq_length"]
+        image_feat = batch["image_feat"]
+        answer_idx = batch["answer_idx"]
+        question_mask = sequence_mask(seq_length)
+        output_logits, module_logits = self.forward(
+            question_inds, question_mask, image_feat
+        )
+        loss = F.cross_entropy(output_logits, answer_idx)
+        loss += self.sharpen_loss(module_logits)
+        answer_preds = torch.argmax(output_logits, dim=1)
+        acc = torch.mean((answer_preds == answer_idx).float())
+        self.log("val_loss", loss)
+        self.log("acc", acc)
+        return loss
+
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
+        optimizer = torch.optim.Adam(
+            self.parameters(),
+            lr=self.cfg.TRAIN.SOLVER.LR,
+            weight_decay=self.cfg.TRAIN.WEIGHT_DECAY,
+        )
         return optimizer
 
     ## bbox offset loss is just MSE
@@ -104,6 +131,6 @@ class Model(pl.LightningModule):
     def sharpen_loss(self, module_probs):
         flat_probs = module_probs.view(-1, self.num_module)
         # the entropy of the module weights
-        entropy = -((torch.log(torch.maximum(flat_probs, 1e-5)) * flat_probs).sum(-1))
+        entropy = -((torch.log(torch.clamp(flat_probs, min=1e-5)) * flat_probs).sum(-1))
         sharpen_loss = torch.mean(entropy)
         return sharpen_loss

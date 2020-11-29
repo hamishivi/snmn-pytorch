@@ -1,9 +1,10 @@
+import math
 import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
 
-from utils import channels_last_conv
+from utils import channels_last_conv, channels_last_conv_1d
 
 MODULE_INPUT_NUM = {
     "_NoOp": 0,
@@ -36,8 +37,8 @@ class NMN(nn.Module):
         # size stuff
         self.cfg = cfg
         self.N = cfg.TRAIN.BATCH_SIZE
-        self.H = cfg.MODEL.H_IMG
-        self.W = cfg.MODEL.W_IMG
+        self.H = cfg.MODEL.H_FEAT
+        self.W = cfg.MODEL.W_FEAT
         self.stack_len = cfg.MODEL.NMN.STACK.LENGTH
         self.att_shape = [self.N, self.H, self.W, 1]
         self.mem_dim = cfg.MODEL.NMN.MEM_DIM
@@ -87,12 +88,18 @@ class NMN(nn.Module):
             f(kb_batch, att_stack_prev, stack_ptr_prev, mem_prev, control_state)
             for f in self.module_funcs
         ]
-        att_stack_avg = (module_prob * torch.stack([r[0] for r in res], 3)).sum(-1)
+        att_stack_avg = (
+            module_prob.view(module_prob.size(0), 1, 1, 1, module_prob.size(1))
+            * torch.stack([r[0] for r in res], 3)
+        ).sum(-1)
         # avg stack pointer and ongoing mem
         stack_ptr_avg = _sharpen_ptr(
-            module_prob * torch.stack([r[1] for r in res], 3), self.cfg
-        ).sum(-1)
-        mem_avg = (module_prob * torch.stack([r[1] for r in res], 3)).sum(-1)
+            (module_prob.unsqueeze(1) * torch.stack([r[1] for r in res], 2)).sum(-1),
+            self.cfg,
+        )
+        mem_avg = (module_prob.unsqueeze(1) * torch.stack([r[2] for r in res], 2)).sum(
+            -1
+        )
         return att_stack_avg, stack_ptr_avg, mem_avg
 
     #### MODULES #####
@@ -115,13 +122,14 @@ class NMN(nn.Module):
         3) 1x1 convolution to get attention logits
         """
         c_mapped = self.find_ci(control_state)
+        c_mapped = c_mapped.view(c_mapped.size(0), 1, 1, c_mapped.size(1))
         elt_prod = F.normalize(kb_batch * c_mapped, dim=-1, p=2)
         att_out = channels_last_conv(elt_prod, self.find_conv)
         # Push to stack
         stack_ptr = _move_ptr_fw(stack_ptr)
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
 
-        return att_stack, stack_ptr, self.mem_zero
+        return att_stack, stack_ptr, self.mem_zero.to(stack_ptr.device)
 
     def Transform(self, kb_batch, att_stack, stack_ptr, mem_in, control_state):
         """
@@ -134,12 +142,14 @@ class NMN(nn.Module):
         # Pop from stack
         att_in = _read_from_stack(att_stack, stack_ptr)
         c_mapped = self.transform_ci(control_state)
-        kb_att_in = _extract_softmax_avg(self.kb_batch, att_in)
+        c_mapped = c_mapped.view(c_mapped.size(0), 1, 1, c_mapped.size(1))
+        kb_att_in = _extract_softmax_avg(kb_batch, att_in)
+        kb_att_in = kb_att_in.view(kb_att_in.size(0), 1, 1, kb_att_in.size(1))
         elt_prod = F.normalize(kb_batch * c_mapped * kb_att_in, dim=-1, p=2)
         att_out = channels_last_conv(elt_prod, self.transform_conv)
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
 
-        return att_stack, stack_ptr, self.mem_zero
+        return att_stack, stack_ptr, self.mem_zero.to(stack_ptr.device)
 
     def Filter(self, kb_batch, att_stack, stack_ptr, mem_in, control_state):
         """
@@ -154,7 +164,7 @@ class NMN(nn.Module):
             kb_batch, att_stack, stack_ptr, mem_in, control_state
         )
 
-        return att_stack, stack_ptr, self.mem_zero
+        return att_stack, stack_ptr, self.mem_zero.to(stack_ptr.device)
 
     def And(self, kb_batch, att_stack, stack_ptr, mem_in, control_state):
         """
@@ -171,7 +181,7 @@ class NMN(nn.Module):
         # stack_ptr = _move_ptr_fw(stack_ptr)  # cancel-out above
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
 
-        return att_stack, stack_ptr, self.mem_zero
+        return att_stack, stack_ptr, self.mem_zero.to(stack_ptr.device)
 
     def Or(self, kb_batch, att_stack, stack_ptr, mem_in, control_state):
         """
@@ -186,7 +196,7 @@ class NMN(nn.Module):
         # Push to stack
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
 
-        return att_stack, stack_ptr, self.mem_zero
+        return att_stack, stack_ptr, self.mem_zero.to(stack_ptr.device)
 
     def Scene(self, kb_batch, att_stack, stack_ptr, mem_in, control_state):
         """
@@ -200,7 +210,7 @@ class NMN(nn.Module):
         stack_ptr = _move_ptr_fw(stack_ptr)
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
 
-        return att_stack, stack_ptr, self.mem_zero
+        return att_stack, stack_ptr, self.mem_zero.to(stack_ptr.device)
 
     def DescribeOne(self, kb_batch, att_stack, stack_ptr, mem_in, control_state):
         """
@@ -214,13 +224,15 @@ class NMN(nn.Module):
         # Pop from stack
         att_in = _read_from_stack(att_stack, stack_ptr)
         c_mapped = self.describeone_ci(control_state)
-        kb_att_in = _extract_softmax_avg(self.kb_batch, att_in)
+        kb_att_in = _extract_softmax_avg(kb_batch, att_in)
         elt_prod = F.normalize(c_mapped * kb_att_in, dim=-1, p=2)
         mem_out = self.describeone_mem(
             torch.cat([control_state, mem_in, elt_prod], axis=1)
         )
         # Push to stack
-        att_stack = _write_to_stack(att_stack, stack_ptr, self.att_zero)
+        att_stack = _write_to_stack(
+            att_stack, stack_ptr, self.att_zero.to(stack_ptr.device)
+        )
 
         return att_stack, stack_ptr, mem_out
 
@@ -238,14 +250,16 @@ class NMN(nn.Module):
         stack_ptr = _move_ptr_bw(stack_ptr)
         att_in_1 = _read_from_stack(att_stack, stack_ptr)
         c_mapped = self.describetwo_ci(control_state)
-        kb_att_in_1 = _extract_softmax_avg(self.kb_batch, att_in_1)
-        kb_att_in_2 = _extract_softmax_avg(self.kb_batch, att_in_2)
+        kb_att_in_1 = _extract_softmax_avg(kb_batch, att_in_1)
+        kb_att_in_2 = _extract_softmax_avg(kb_batch, att_in_2)
         elt_prod = F.normalize(c_mapped * kb_att_in_1 * kb_att_in_2, dim=-1, p=2)
         mem_out = self.describetwo_mem(
             torch.cat([control_state, mem_in, elt_prod], dim=1)
         )
         # Push to stack
-        att_stack = _write_to_stack(att_stack, stack_ptr, self.att_zero)
+        att_stack = _write_to_stack(
+            att_stack, stack_ptr, self.att_zero.to(stack_ptr.device)
+        )
 
         return att_stack, stack_ptr, mem_out
 
@@ -254,22 +268,26 @@ def _move_ptr_fw(stack_ptr):
     """
     Move the stack pointer forward (i.e. to push to stack).
     """
-    filter_fw = torch.tensor([1, 0, 0])
-    new_stack_ptr = channels_last_conv(
-        stack_ptr, lambda x: F.conv1d(x, filter_fw).squeeze(2)
+    filter_fw = torch.tensor([1, 0, 0], device=stack_ptr.device).view(1, 1, 3)
+    padding_size = math.ceil(stack_ptr.size(1) / 3) * 3 - stack_ptr.size(1)
+    new_stack_ptr = channels_last_conv_1d(
+        stack_ptr.unsqueeze(2),
+        lambda x: F.conv1d(x, filter_fw, padding=padding_size).squeeze(2),
     )
-    return new_stack_ptr
+    return new_stack_ptr.squeeze(2)
 
 
 def _move_ptr_bw(stack_ptr):
     """
     Move the stack pointer backward (i.e. to pop from stack).
     """
-    filter_bw = torch.tensor([0, 0, 1])
-    new_stack_ptr = channels_last_conv(
-        stack_ptr, lambda x: F.conv1d(x, filter_bw).squeeze(2)
+    filter_bw = torch.tensor([0, 0, 1], device=stack_ptr.device).view(1, 1, 3)
+    padding_size = math.ceil(stack_ptr.size(1) / 3) * 3 - stack_ptr.size(1)
+    new_stack_ptr = channels_last_conv_1d(
+        stack_ptr.unsqueeze(2),
+        lambda x: F.conv1d(x, filter_bw, padding=padding_size).squeeze(2),
     )
-    return new_stack_ptr
+    return new_stack_ptr.squeeze(2)
 
 
 def _read_from_stack(att_stack, stack_ptr):
@@ -309,7 +327,7 @@ def _sharpen_ptr(stack_ptr, cfg):
 
 def _spatial_softmax(att_raw):
     N = att_raw.size(0)
-    att_softmax = F.softmax(att_raw.view(N, -1), axis=1)
+    att_softmax = F.softmax(att_raw.view(N, -1), dim=1)
     att_softmax = att_softmax.view(att_raw.size())  # idk if this is legit torch...
     return att_softmax
 

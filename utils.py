@@ -4,6 +4,7 @@ Useful reusable methods that don't have another clear home.
 import re
 
 import torch
+import torch.nn.functional as F
 import numpy as np
 
 
@@ -75,7 +76,7 @@ class VocabDict:
 def sequence_mask(lengths, maxlen=None, dtype=torch.long):
     if maxlen is None:
         maxlen = lengths.max()
-    row_vector = torch.arange(0, maxlen, 1)
+    row_vector = torch.arange(0, maxlen, 1, device=lengths.device)
     matrix = torch.unsqueeze(lengths, dim=-1)
     mask = row_vector < matrix
     mask.type(dtype)
@@ -88,3 +89,8 @@ def sequence_mask(lengths, maxlen=None, dtype=torch.long):
 def channels_last_conv(input, fn):
     output = fn(input.permute([0, 3, 1, 2]))
     return output.permute([0, 2, 3, 1])
+
+
+def channels_last_conv_1d(input, fn):
+    output = fn(input.permute([0, 2, 1]))
+    return output.permute([0, 2, 1])

@@ -3,6 +3,7 @@ DataLoader class for CLEVR used in training.
 """
 import torch
 from torch.utils.data import Dataset
+from torch.nn.utils.rnn import pad_sequence
 from utils import VocabDict
 import numpy as np
 
@@ -78,20 +79,20 @@ class PreprocessedClevr(Dataset):
                 gt_layout_tokens = [t for t in gt_layout_tokens if t]
             layout_inds = [self.layout_dict.word2idx(w) for w in gt_layout_tokens]
 
-        batch = [
-            torch.tensor(question_inds),
-            torch.tensor(seq_length),
-            torch.tensor(image_feat).squeeze(0),
-            image_path,
-        ]
+        batch = {
+            "question_inds": torch.tensor(question_inds),
+            "seq_length": torch.tensor(seq_length),
+            "image_feat": torch.tensor(image_feat).squeeze(0),
+            "image_path": image_path,
+        }
         if self.load_answer:
-            batch.append(torch.tensor(answer_idx))
+            batch["answer_idx"] = torch.tensor(answer_idx)
         if self.load_bbox:
-            batch.append(torch.tensor(bbox_batch))
-            batch.append(torch.tensor(bbox_ind))
-            batch.append(torch.tensor(bbox_offset))
+            batch["bbox_batch"] = torch.tensor(bbox_batch)
+            batch["bbox_ind"] = torch.tensor(bbox_ind)
+            batch["bbox_offset"] = torch.tensor(bbox_offset)
         if self.load_gt_layout:
-            batch.append(torch.tensor(layout_inds))
+            batch["layout_inds"] = torch.tensor(layout_inds)
         return batch
 
     def get_answer_choices(self):
@@ -102,6 +103,33 @@ class PreprocessedClevr(Dataset):
 
     def get_vocab_size(self):
         return self.vocab_dict.num_vocab
+
+
+# pytorch doesnt pad in collate, so we use a custom collate fn
+def clevr_collate(batch):
+    batch_dict = {k: [batch[0][k]] for k in batch[0]}
+    if len(batch) > 1:
+        for k in batch_dict:
+            for b in batch[1:]:
+                batch_dict[k].append(b[k])
+    # stack/padding stuff
+    batch_dict["question_inds"] = pad_sequence(
+        batch_dict["question_inds"], batch_first=True
+    )
+    batch_dict["layout_inds"] = pad_sequence(
+        batch_dict["layout_inds"], batch_first=True
+    )
+    for k in [
+        "seq_length",
+        "image_feat",
+        "answer_idx",
+        "bbox_batch",
+        "bbox_ind",
+        "bbox_offset",
+    ]:
+        if k in batch_dict:
+            batch_dict[k] = torch.stack(batch_dict[k], 0)
+    return batch_dict
 
 
 def bbox2feat_grid(bbox, stride_H, stride_W, feat_H, feat_W):

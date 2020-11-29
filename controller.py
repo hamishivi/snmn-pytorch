@@ -10,10 +10,10 @@ class Controller(nn.Module):
     Essentially same as MAC control unit.
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, num_modules):
         super().__init__()
         self.cfg = cfg
-        self.num_modules = 3
+        self.num_modules = num_modules
         dim = cfg.MODEL.LSTM_DIM
 
         self.shared_control_proj = linear(dim, dim)
