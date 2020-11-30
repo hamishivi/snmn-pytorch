@@ -3,7 +3,7 @@ import sys
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
-from clevr import PreprocessedClevr
+from clevr import PreprocessedClevr, clevr_collate
 from model import Model
 from config import cfg
 
@@ -48,9 +48,17 @@ trainer = pl.Trainer(
 trainer.fit(
     model,
     DataLoader(
-        train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, num_workers=4, pin_memory=True
+        train_dataset,
+        batch_size=cfg.TRAIN.BATCH_SIZE,
+        num_workers=4,
+        pin_memory=True,
+        collate_fn=clevr_collate,
     ),
     DataLoader(
-        val_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, num_workers=4, pin_memory=True
+        val_dataset,
+        batch_size=cfg.TRAIN.BATCH_SIZE,
+        num_workers=4,
+        pin_memory=True,
+        collate_fn=clevr_collate,
     ),
 )
