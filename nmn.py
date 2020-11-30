@@ -40,16 +40,10 @@ class NMN(nn.Module):
         self.H = cfg.MODEL.H_FEAT
         self.W = cfg.MODEL.W_FEAT
         self.stack_len = cfg.MODEL.NMN.STACK.LENGTH
-        self.att_shape = [self.N, self.H, self.W, 1]
         self.mem_dim = cfg.MODEL.NMN.MEM_DIM
-        # initial stack, zeros everywhere
-        self.att_stack_init = torch.zeros(self.N, self.H, self.W, self.stack_len)
         # initial stack pointer, points to bottom.
         self.stack_ptr_init = F.one_hot(torch.zeros(self.N).long(), self.stack_len)
         self.mem_init = torch.zeros(self.N, self.mem_dim)
-        # zero-outputs that can be easily used by the modules
-        self.att_zero = torch.zeros(self.att_shape)
-        self.mem_zero = torch.zeros(self.N, self.mem_dim)
         # the set of modules and functions (e.g. "_Find" -> Find)
         self.module_names = module_names
         self.module_funcs = [getattr(self, m[1:]) for m in module_names]
@@ -70,9 +64,22 @@ class NMN(nn.Module):
         self.describetwo_ci = nn.Linear(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM)
         self.describetwo_mem = nn.Linear(cfg.MODEL.KB_DIM * 3, cfg.MODEL.NMN.MEM_DIM)
 
-    def get_init_values(self):
+    def get_att_zero(self, batch_size, device):
+        return torch.zeros(batch_size, self.H, self.W, 1, device=device)
+
+    def get_mem_zero(self, batch_size, device):
+        return torch.zeros(batch_size, self.mem_dim, device=device)
+
+    def get_init_values(self, batch_size, device):
         # the versions of stuff we will use in the forward function.
-        return self.att_stack_init, self.stack_ptr_init, self.mem_init
+        att_stack_init = torch.zeros(
+            batch_size, self.H, self.W, self.stack_len, device=device
+        )
+        stack_ptr_init = F.one_hot(
+            torch.zeros(batch_size, device=device).long(), self.stack_len
+        )
+        mem_init = torch.zeros(batch_size, self.mem_dim, device=device)
+        return att_stack_init, stack_ptr_init, mem_init
 
     def forward(
         self,
@@ -90,7 +97,7 @@ class NMN(nn.Module):
         ]
         att_stack_avg = (
             module_prob.view(module_prob.size(0), 1, 1, 1, module_prob.size(1))
-            * torch.stack([r[0] for r in res], 3)
+            * torch.stack([r[0] for r in res], 4)
         ).sum(-1)
         # avg stack pointer and ongoing mem
         stack_ptr_avg = _sharpen_ptr(
@@ -129,7 +136,11 @@ class NMN(nn.Module):
         stack_ptr = _move_ptr_fw(stack_ptr)
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
 
-        return att_stack, stack_ptr, self.mem_zero.to(stack_ptr.device)
+        return (
+            att_stack,
+            stack_ptr,
+            self.get_mem_zero(kb_batch.size(0), kb_batch.device),
+        )
 
     def Transform(self, kb_batch, att_stack, stack_ptr, mem_in, control_state):
         """
@@ -149,7 +160,11 @@ class NMN(nn.Module):
         att_out = channels_last_conv(elt_prod, self.transform_conv)
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
 
-        return att_stack, stack_ptr, self.mem_zero.to(stack_ptr.device)
+        return (
+            att_stack,
+            stack_ptr,
+            self.get_mem_zero(kb_batch.size(0), kb_batch.device),
+        )
 
     def Filter(self, kb_batch, att_stack, stack_ptr, mem_in, control_state):
         """
@@ -164,7 +179,11 @@ class NMN(nn.Module):
             kb_batch, att_stack, stack_ptr, mem_in, control_state
         )
 
-        return att_stack, stack_ptr, self.mem_zero.to(stack_ptr.device)
+        return (
+            att_stack,
+            stack_ptr,
+            self.get_mem_zero(kb_batch.size(0), kb_batch.device),
+        )
 
     def And(self, kb_batch, att_stack, stack_ptr, mem_in, control_state):
         """
@@ -181,7 +200,11 @@ class NMN(nn.Module):
         # stack_ptr = _move_ptr_fw(stack_ptr)  # cancel-out above
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
 
-        return att_stack, stack_ptr, self.mem_zero.to(stack_ptr.device)
+        return (
+            att_stack,
+            stack_ptr,
+            self.get_mem_zero(kb_batch.size(0), kb_batch.device),
+        )
 
     def Or(self, kb_batch, att_stack, stack_ptr, mem_in, control_state):
         """
@@ -196,7 +219,11 @@ class NMN(nn.Module):
         # Push to stack
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
 
-        return att_stack, stack_ptr, self.mem_zero.to(stack_ptr.device)
+        return (
+            att_stack,
+            stack_ptr,
+            self.get_mem_zero(kb_batch.size(0), kb_batch.device),
+        )
 
     def Scene(self, kb_batch, att_stack, stack_ptr, mem_in, control_state):
         """
@@ -210,7 +237,11 @@ class NMN(nn.Module):
         stack_ptr = _move_ptr_fw(stack_ptr)
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
 
-        return att_stack, stack_ptr, self.mem_zero.to(stack_ptr.device)
+        return (
+            att_stack,
+            stack_ptr,
+            self.get_mem_zero(kb_batch.size(0), kb_batch.device),
+        )
 
     def DescribeOne(self, kb_batch, att_stack, stack_ptr, mem_in, control_state):
         """
@@ -231,7 +262,7 @@ class NMN(nn.Module):
         )
         # Push to stack
         att_stack = _write_to_stack(
-            att_stack, stack_ptr, self.att_zero.to(stack_ptr.device)
+            att_stack, stack_ptr, self.get_att_zero(kb_batch.size(0), kb_batch.device)
         )
 
         return att_stack, stack_ptr, mem_out
@@ -258,7 +289,7 @@ class NMN(nn.Module):
         )
         # Push to stack
         att_stack = _write_to_stack(
-            att_stack, stack_ptr, self.att_zero.to(stack_ptr.device)
+            att_stack, stack_ptr, self.get_att_zero(kb_batch.size(0), kb_batch.device)
         )
 
         return att_stack, stack_ptr, mem_out
@@ -268,10 +299,10 @@ def _move_ptr_fw(stack_ptr):
     """
     Move the stack pointer forward (i.e. to push to stack).
     """
-    filter_fw = torch.tensor([1, 0, 0], device=stack_ptr.device).view(1, 1, 3)
+    filter_fw = torch.tensor([1, 0, 0], device=stack_ptr.device).view(1, 1, 3).float()
     padding_size = math.ceil(stack_ptr.size(1) / 3) * 3 - stack_ptr.size(1)
     new_stack_ptr = channels_last_conv_1d(
-        stack_ptr.unsqueeze(2),
+        stack_ptr.unsqueeze(2).float(),
         lambda x: F.conv1d(x, filter_fw, padding=padding_size).squeeze(2),
     )
     return new_stack_ptr.squeeze(2)
@@ -281,10 +312,10 @@ def _move_ptr_bw(stack_ptr):
     """
     Move the stack pointer backward (i.e. to pop from stack).
     """
-    filter_bw = torch.tensor([0, 0, 1], device=stack_ptr.device).view(1, 1, 3)
+    filter_bw = torch.tensor([0, 0, 1], device=stack_ptr.device).view(1, 1, 3).float()
     padding_size = math.ceil(stack_ptr.size(1) / 3) * 3 - stack_ptr.size(1)
     new_stack_ptr = channels_last_conv_1d(
-        stack_ptr.unsqueeze(2),
+        stack_ptr.unsqueeze(2).float(),
         lambda x: F.conv1d(x, filter_bw, padding=padding_size).squeeze(2),
     )
     return new_stack_ptr.squeeze(2)

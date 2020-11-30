@@ -38,9 +38,19 @@ module_names = train_dataset.get_module_names()
 vocab_size = train_dataset.get_vocab_size()
 
 model = Model(cfg, num_choices, module_names, vocab_size)
-trainer = pl.Trainer(gpus=1, gradient_clip_val=cfg.TRAIN.GRAD_MAX_NORM)
+trainer = pl.Trainer(
+    gpus=1,
+    gradient_clip_val=cfg.TRAIN.GRAD_MAX_NORM,
+    progress_bar_refresh_rate=20,
+    reload_dataloaders_every_epoch=True,
+    max_steps=cfg.TRAIN.MAX_ITER,
+)
 trainer.fit(
     model,
-    DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE),
-    DataLoader(val_dataset, batch_size=cfg.TRAIN.BATCH_SIZE),
+    DataLoader(
+        train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, num_workers=4, pin_memory=True
+    ),
+    DataLoader(
+        val_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, num_workers=4, pin_memory=True
+    ),
 )

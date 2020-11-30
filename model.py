@@ -68,11 +68,8 @@ class Model(pl.LightningModule):
         kb_batch = channels_last_conv(kb_batch, self.kb_process)
         # init values
         control = self.init_ctrl.unsqueeze(0).repeat(image_feats.size(0), 1)
-        att_stack, stack_ptr, mem = self.nmn.get_init_values()
-        att_stack, stack_ptr, mem = (
-            att_stack.to(q_vec.device),
-            stack_ptr.to(q_vec.device),
-            mem.to(q_vec.device),
+        att_stack, stack_ptr, mem = self.nmn.get_init_values(
+            image_feats.size(0), image_feats.device
         )
         module_logits = []
         for i in range(self.steps):
