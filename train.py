@@ -30,7 +30,7 @@ if cfg.LOAD:
 else:
     model = Model(cfg, num_choices, module_names, vocab_size)
 
-wandb_logger = WandbLogger(project=cfg.WANDB_PROJECT_NAME)
+wandb_logger = WandbLogger(project=cfg.WANDB_PROJECT_NAME, log_model=True)
 
 trainer = pl.Trainer(
     gpus=-1,

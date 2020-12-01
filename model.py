@@ -54,7 +54,7 @@ class Model(pl.LightningModule):
         self.init_ctrl = nn.Parameter(torch.ones(cfg.MODEL.LSTM_DIM))
         # metrics
         self.train_acc = pl.metrics.Accuracy()
-        self.val_acc = pl.metrics.Accuracy()
+        self.valid_acc = pl.metrics.Accuracy()
         self.test_acc = pl.metrics.Accuracy()
 
     def forward(self, question, question_mask, image_feats):
@@ -133,17 +133,17 @@ class Model(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         answer_logits, module_logits, answer_idx = self._test_step(batch)
         loss = self.loss(answer_logits, answer_idx, module_logits)
-        self.val_acc(answer_logits, answer_idx)
-        self.log("val/loss", loss, on_step=False, on_epoch=True)
-        self.log("val/acc", self.val_acc, on_step=False, on_epoch=True)
+        self.valid_acc(answer_logits, answer_idx)
+        self.log("valid/loss_epoch", loss, on_step=False, on_epoch=True)
+        self.log("valid/acc_epoch", self.valid_acc, on_step=False, on_epoch=True)
         return answer_logits
 
     def test_step(self, batch, batch_idx):
         answer_logits, module_logits, answer_idx = self._test_step(batch)
         loss = self.loss(answer_logits, answer_idx, module_logits)
         self.test_acc(answer_logits, answer_idx)
-        self.log("test/loss", loss, on_step=False, on_epoch=True)
-        self.log("test/acc", self.test_acc, on_step=False, on_epoch=True)
+        self.log("test/loss_epoch", loss, on_step=False, on_epoch=True)
+        self.log("test/acc_epoch", self.test_acc, on_step=False, on_epoch=True)
 
     def validation_epoch_end(self, validation_step_outputs):
         flattened_logits = torch.flatten(torch.cat(validation_step_outputs))
