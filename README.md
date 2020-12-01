@@ -22,7 +22,7 @@ wandb login
 
 ### Download and Preprocess Data
 
-**note that this preprocessing step requires tensorflow 1.x**, due to it using this older version of resnet. Maybe at some point I'll rewrite this, but not now. Theoretically you can save the results from this step, but the outputs are large (> 70gig).
+Note that theoretically you can save the results from this step, but the outputs are large (> 70gig), so I have not done this. This is hard-coded to use a single gpu currently.
 
 1. Download the CLEVR dataset from http://cs.stanford.edu/people/jcjohns/clevr/, and symbol link it to clevr_prep/clevr_dataset. After this step, the file structure should look like
 
