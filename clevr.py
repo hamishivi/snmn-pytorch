@@ -165,10 +165,10 @@ class ClevrDataModule(pl.LightningDataModule):
                 self.cfg.MODEL.T_ENCODER,
                 self.cfg.MODEL.T_CTRL,
                 True,
-                self.fg.VOCAB_ANSWER_FILE,
-                self.fg.VOCAB_LAYOUT_FILE,
-                self.fg.MODEL.H_FEAT,
-                self.fg.MODEL.W_FEAT,
+                self.cfg.VOCAB_ANSWER_FILE,
+                self.cfg.VOCAB_LAYOUT_FILE,
+                self.cfg.MODEL.H_FEAT,
+                self.cfg.MODEL.W_FEAT,
             )
             self.clevr_val = PreprocessedClevr(
                 self.cfg.VAL_IMDB_FILE,
@@ -176,10 +176,10 @@ class ClevrDataModule(pl.LightningDataModule):
                 self.cfg.MODEL.T_ENCODER,
                 self.cfg.MODEL.T_CTRL,
                 True,
-                self.fg.VOCAB_ANSWER_FILE,
-                self.fg.VOCAB_LAYOUT_FILE,
-                self.fg.MODEL.H_FEAT,
-                self.fg.MODEL.W_FEAT,
+                self.cfg.VOCAB_ANSWER_FILE,
+                self.cfg.VOCAB_LAYOUT_FILE,
+                self.cfg.MODEL.H_FEAT,
+                self.cfg.MODEL.W_FEAT,
             )
             self.clevr_module = self.clevr_train
         if stage == "test" or stage is None:
@@ -189,10 +189,10 @@ class ClevrDataModule(pl.LightningDataModule):
                 self.cfg.MODEL.T_ENCODER,
                 self.cfg.MODEL.T_CTRL,
                 True,
-                self.fg.VOCAB_ANSWER_FILE,
-                self.fg.VOCAB_LAYOUT_FILE,
-                self.fg.MODEL.H_FEAT,
-                self.fg.MODEL.W_FEAT,
+                self.cfg.VOCAB_ANSWER_FILE,
+                self.cfg.VOCAB_LAYOUT_FILE,
+                self.cfg.MODEL.H_FEAT,
+                self.cfg.MODEL.W_FEAT,
             )
             self.clevr_module = self.clevr_test
 
