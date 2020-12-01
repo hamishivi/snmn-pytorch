@@ -3,6 +3,8 @@ from torch import nn
 from torch.nn import Sequential
 import torch.nn.functional as F
 import pytorch_lightning as pl
+from torch.nn.modules import module
+import wandb
 
 from controller import Controller
 from nmn import NMN
@@ -50,6 +52,10 @@ class Model(pl.LightningModule):
         )
 
         self.init_ctrl = nn.Parameter(torch.ones(cfg.MODEL.LSTM_DIM))
+        # metrics
+        self.train_acc = pl.metrics.Accuracy()
+        self.valid_acc = pl.metrics.Accuracy()
+        self.test_acc = pl.metrics.Accuracy()
 
     def forward(self, question, question_mask, image_feats):
         # Input unit - encoding question
@@ -81,6 +87,22 @@ class Model(pl.LightningModule):
         output_logits = self.output_unit(torch.cat([q_vec, mem], 1))
         return output_logits, torch.stack(module_logits)
 
+    ## bbox offset loss is just MSE
+
+    def sharpen_loss(self, module_probs):
+        flat_probs = module_probs.view(-1, self.num_module)
+        # the entropy of the module weights
+        entropy = -((torch.log(torch.clamp(flat_probs, min=1e-5)) * flat_probs).sum(-1))
+        sharpen_loss = torch.mean(entropy)
+        return sharpen_loss
+
+    def loss(self, answer_logits, answer_idx, module_logits):
+        loss = F.cross_entropy(answer_logits, answer_idx)
+        loss += self.sharpen_loss(module_logits)
+        return loss
+
+    ## below is the pytorch lightning training code
+
     def training_step(self, batch, batch_idx):
         question_inds = batch["question_inds"]
         seq_length = batch["seq_length"]
@@ -90,11 +112,14 @@ class Model(pl.LightningModule):
         output_logits, module_logits = self.forward(
             question_inds, question_mask, image_feat
         )
-        loss = F.cross_entropy(output_logits, answer_idx)
-        loss += self.sharpen_loss(module_logits)
+        loss = self.loss(output_logits, answer_idx, module_logits)
+        # logging
+        self.train_acc(output_logits, answer_idx)
+        self.log("train/loss", loss, on_epoch=True)
+        self.log("train/acc", self.train_acc, on_epoch=True)
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def _test_step(self, batch):
         question_inds = batch["question_inds"]
         seq_length = batch["seq_length"]
         image_feat = batch["image_feat"]
@@ -103,13 +128,31 @@ class Model(pl.LightningModule):
         output_logits, module_logits = self.forward(
             question_inds, question_mask, image_feat
         )
-        loss = F.cross_entropy(output_logits, answer_idx)
-        loss += self.sharpen_loss(module_logits)
-        answer_preds = torch.argmax(output_logits, dim=1)
-        acc = torch.mean((answer_preds == answer_idx).float())
-        self.log("val_loss", loss)
-        self.log("acc", acc)
-        return loss
+        return output_logits, module_logits, answer_idx
+
+    def validation_step(self, batch, batch_idx):
+        answer_logits, module_logits, answer_idx = self._test_step(batch)
+        loss = self.loss(answer_logits, answer_idx, module_logits)
+        self.val_acc(answer_logits, answer_idx)
+        self.log("val/loss", loss, on_step=False, on_epoch=True)
+        self.log("val/acc", self.val_acc, on_step=False, on_epoch=True)
+        return answer_logits
+
+    def test_step(self, batch, batch_idx):
+        answer_logits, module_logits, answer_idx = self._test_step(batch)
+        loss = self.loss(answer_logits, answer_idx, module_logits)
+        self.test_acc(answer_logits, answer_idx)
+        self.log("test/loss", loss, on_step=False, on_epoch=True)
+        self.log("test/acc", self.test_acc, on_step=False, on_epoch=True)
+
+    def validation_epoch_end(self, validation_step_outputs):
+        flattened_logits = torch.flatten(torch.cat(validation_step_outputs))
+        self.logger.experiment.log(
+            {
+                "valid/logits": wandb.Histogram(flattened_logits.to("cpu")),
+                "global_step": self.global_step,
+            }
+        )
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
@@ -118,12 +161,3 @@ class Model(pl.LightningModule):
             weight_decay=self.cfg.TRAIN.WEIGHT_DECAY,
         )
         return optimizer
-
-    ## bbox offset loss is just MSE
-
-    def sharpen_loss(self, module_probs):
-        flat_probs = module_probs.view(-1, self.num_module)
-        # the entropy of the module weights
-        entropy = -((torch.log(torch.clamp(flat_probs, min=1e-5)) * flat_probs).sum(-1))
-        sharpen_loss = torch.mean(entropy)
-        return sharpen_loss

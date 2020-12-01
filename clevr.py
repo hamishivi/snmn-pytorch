@@ -1,9 +1,11 @@
 """
 DataLoader class for CLEVR used in training.
+Also define DataModule for pytorch-lightning-style training.
 """
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
+import pytorch_lightning as pl
 from utils import VocabDict
 import numpy as np
 
@@ -146,3 +148,69 @@ def bbox2feat_grid(bbox, stride_H, stride_W, feat_H, feat_W):
     ind = yc * feat_W + xc
     offset = x1 - xc, y1 - yc, x2 - xc, y2 - yc
     return ind, offset
+
+
+class ClevrDataModule(pl.LightningDataModule):
+    def __init__(self, cfg, batch_size=64):
+        super().__init__()
+        self.cfg = cfg
+        self.batch_size = batch_size
+
+    def setup(self, stage=None):
+        # we set up only relevant datasets when stage is specified
+        if stage == "fit" or stage is None:
+            self.clevr_train = PreprocessedClevr(
+                self.cfg.TRAIN_IMDB_FILE,
+                self.cfg.VOCAB_QUESTION_FILE,
+                self.cfg.MODEL.T_ENCODER,
+                self.cfg.MODEL.T_CTRL,
+                True,
+                self.fg.VOCAB_ANSWER_FILE,
+                self.fg.VOCAB_LAYOUT_FILE,
+                self.fg.MODEL.H_FEAT,
+                self.fg.MODEL.W_FEAT,
+            )
+            self.clevr_val = PreprocessedClevr(
+                self.cfg.VAL_IMDB_FILE,
+                self.cfg.VOCAB_QUESTION_FILE,
+                self.cfg.MODEL.T_ENCODER,
+                self.cfg.MODEL.T_CTRL,
+                True,
+                self.fg.VOCAB_ANSWER_FILE,
+                self.fg.VOCAB_LAYOUT_FILE,
+                self.fg.MODEL.H_FEAT,
+                self.fg.MODEL.W_FEAT,
+            )
+            self.clevr_module = self.clevr_train
+        if stage == "test" or stage is None:
+            self.clevr_test = PreprocessedClevr(
+                self.cfg.TEST_IMDB_FILE,
+                self.cfg.VOCAB_QUESTION_FILE,
+                self.cfg.MODEL.T_ENCODER,
+                self.cfg.MODEL.T_CTRL,
+                True,
+                self.fg.VOCAB_ANSWER_FILE,
+                self.fg.VOCAB_LAYOUT_FILE,
+                self.fg.MODEL.H_FEAT,
+                self.fg.MODEL.W_FEAT,
+            )
+            self.clevr_module = self.clevr_test
+
+    # we define a separate DataLoader for each of train/val/test
+    def train_dataloader(self):
+        clevr_train = DataLoader(
+            self.clevr_train, batch_size=self.batch_size, collate_fn=clevr_collate
+        )
+        return clevr_train
+
+    def val_dataloader(self):
+        clevr_val = DataLoader(
+            self.clevr_val, batch_size=10 * self.batch_size, collate_fn=clevr_collate
+        )
+        return clevr_val
+
+    def test_dataloader(self):
+        clevr_test = DataLoader(
+            self.clevr_test, batch_size=10 * self.batch_size, collate_fn=clevr_collate
+        )
+        return clevr_test

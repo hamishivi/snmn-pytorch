@@ -2,43 +2,22 @@ import sys
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
-from torch.utils.data import DataLoader
 
-from clevr import PreprocessedClevr, clevr_collate
+from clevr import ClevrDataModule
 from model import Model
 from config import cfg
 
 cfg.merge_from_file(sys.argv[1])  # path to a valid cfg to use
 cfg.freeze()
 
-train_dataset = PreprocessedClevr(
-    cfg.TRAIN_IMDB_FILE,
-    cfg.VOCAB_QUESTION_FILE,
-    cfg.MODEL.T_ENCODER,
-    cfg.MODEL.T_CTRL,
-    True,
-    cfg.VOCAB_ANSWER_FILE,
-    cfg.VOCAB_LAYOUT_FILE,
-    cfg.MODEL.H_FEAT,
-    cfg.MODEL.W_FEAT,
-)
-val_dataset = PreprocessedClevr(
-    cfg.VAL_IMDB_FILE,
-    cfg.VOCAB_QUESTION_FILE,
-    cfg.MODEL.T_ENCODER,
-    cfg.MODEL.T_CTRL,
-    True,
-    cfg.VOCAB_ANSWER_FILE,
-    cfg.VOCAB_LAYOUT_FILE,
-    cfg.MODEL.H_FEAT,
-    cfg.MODEL.W_FEAT,
-)
+clevr = ClevrDataModule(cfg, cfg.TRAIN.BATCH_SIZE)
+clevr.setup()
 
-num_choices = train_dataset.get_answer_choices()
-module_names = train_dataset.get_module_names()
-vocab_size = train_dataset.get_vocab_size()
+# really these should be exposed in the data module...
+num_choices = clevr.clevr_module.get_answer_choices()
+module_names = clevr.clevr_module.get_module_names()
+vocab_size = clevr.clevr_module.get_vocab_size()
 
-wandb_logger = WandbLogger(project=cfg.WANDB_PROJECT_NAME)
 
 if cfg.LOAD:
     model = Model.load_from_checkpoint(
@@ -51,28 +30,17 @@ if cfg.LOAD:
 else:
     model = Model(cfg, num_choices, module_names, vocab_size)
 
+wandb_logger = WandbLogger(project=cfg.WANDB_PROJECT_NAME)
+
 trainer = pl.Trainer(
-    gpus=1,
+    gpus=-1,
     gradient_clip_val=cfg.TRAIN.GRAD_MAX_NORM,
     progress_bar_refresh_rate=20,
     reload_dataloaders_every_epoch=True,
     max_steps=cfg.TRAIN.MAX_ITER,
     logger=wandb_logger,
 )
-trainer.fit(
-    model,
-    DataLoader(
-        train_dataset,
-        batch_size=cfg.TRAIN.BATCH_SIZE,
-        num_workers=4,
-        pin_memory=True,
-        collate_fn=clevr_collate,
-    ),
-    DataLoader(
-        val_dataset,
-        batch_size=cfg.TRAIN.BATCH_SIZE,
-        num_workers=4,
-        pin_memory=True,
-        collate_fn=clevr_collate,
-    ),
-)
+
+trainer.fit(model, clevr)
+
+trainer.test(datamodule=clevr, ckpt_path=None)
