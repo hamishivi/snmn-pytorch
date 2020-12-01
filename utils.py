@@ -16,7 +16,7 @@ def pack_and_rnn(data, data_len, fn):
     return torch.nn.utils.rnn.pad_packed_sequence(out[0], batch_first=True)[0], out[1]
 
 
-def get_positional_encoding(H, W, pe_dim):
+def get_positional_encoding(H, W, pe_dim, device):
     # this should probably be converted to torch stuff? maybe?
     assert pe_dim % 4 == 0, "pe_dim must be a multiply of 4 (h/w x sin/cos)"
     c_period = 10000.0 ** np.linspace(0.0, 1.0, pe_dim // 4)
@@ -26,7 +26,7 @@ def get_positional_encoding(H, W, pe_dim):
         (np.sin(h_vec), np.cos(h_vec), np.sin(w_vec), np.cos(w_vec)), axis=-1
     )
     position_encoding = position_encoding.reshape((1, H, W, pe_dim))
-    return torch.tensor(position_encoding)
+    return torch.tensor(position_encoding, device=device, dtype=torch.float)
 
 
 _SENTENCE_SPLIT_REGEX = re.compile(r"(\W+)")
@@ -79,7 +79,7 @@ def sequence_mask(lengths, maxlen=None, dtype=torch.long):
     row_vector = torch.arange(0, maxlen, 1, device=lengths.device)
     matrix = torch.unsqueeze(lengths, dim=-1)
     mask = row_vector < matrix
-    return torch.tensor(mask, dtype=dtype)
+    return mask.type(dtype)
 
 
 # pytorch doesnt have a channels last conv option, as far as I can see.

@@ -58,11 +58,7 @@ class Model(pl.LightningModule):
         q_vec = torch.cat([h[0], h[1]], -1)
         # Process kb
         position_encoding = get_positional_encoding(
-            image_feats.size(1), image_feats.size(2), self.pe_dim
-        ).float()
-        # convert to tensor and tile along batch dim
-        position_encoding = torch.tensor(
-            position_encoding, device=image_feats.device
+            image_feats.size(1), image_feats.size(2), self.pe_dim, image_feats.device
         ).repeat(image_feats.size(0), 1, 1, 1)
         kb_batch = torch.cat([image_feats, position_encoding], 3)
         kb_batch = channels_last_conv(kb_batch, self.kb_process)
