@@ -5,6 +5,7 @@ import skimage.transform
 import numpy as np
 import torchvision.models as models
 from resnet_pytorch import ResnetC4
+import torch
 
 channel_mean = np.array([123.68, 116.779, 103.939], dtype=np.float32)
 
@@ -19,12 +20,20 @@ resnet101_c4 = ResnetC4(resnet101).cuda()
 
 
 def extract_image_resnet101_c4(impath):
-    im = skimage.io.imread(impath)[..., :3]
-    assert im.dtype == np.uint8
-    im = skimage.transform.resize(im, [H, W], preserve_range=True)
-    im_val = im[np.newaxis, ...] - channel_mean
-    resnet101_c4_val = resnet101_c4(im_val).cpu().numpy()
-    return resnet101_c4_val
+    with torch.no_grad():
+        im = skimage.io.imread(impath)[..., :3]
+        assert im.dtype == np.uint8
+        im = skimage.transform.resize(im, [H, W], preserve_range=True)
+        im_val = im[np.newaxis, ...] - channel_mean
+        # pytorch uses channels-first, so we reorder stuff to fit this.
+        im_val = np.swapaxes(im_val, 3, 1)  # [B,H,W,C] -> [B,C,W,H]
+        im_val = np.swapaxes(im_val, 2, 3)  # [B,C,W,H] -> [B,C,H,W]
+        resnet101_c4_val = resnet101_c4(
+            torch.tensor(im_val, device="cuda", dtype=torch.float)
+        )
+        # reorder again
+        resnet101_c4_val = resnet101_c4_val.permute([0, 2, 3, 1])
+        return resnet101_c4_val.cpu().numpy()
 
 
 def extract_dataset_resnet101_c4(image_dir, save_dir, ext_filter="*.png"):
