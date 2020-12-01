@@ -1,37 +1,21 @@
-import argparse
 import os
-import sys
-
-sys.path.append("../../")  # NOQA
 from glob import glob
 import skimage.io
 import skimage.transform
 import numpy as np
-import tensorflow as tf
-
-from resnet_v1 import resnet_v1_101_c4
+import torchvision.models as models
+from resnet_pytorch import ResnetC4
 
 channel_mean = np.array([123.68, 116.779, 103.939], dtype=np.float32)
 
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--gpu_id", type=int, default=0)
-args = parser.parse_args()
-
-gpu_id = args.gpu_id  # set GPU id to use
-os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
-
-resnet101_model = "../tfmodel/resnet/resnet_v1_101.tfmodel"
 image_basedir = "../clevr_dataset/images/"
 save_basedir = "./resnet101_c4/"
 H = 224
 W = 224
 
-image_batch = tf.placeholder(tf.float32, [1, H, W, 3])
-resnet101_c4 = resnet_v1_101_c4(image_batch, is_training=False)
-saver = tf.train.Saver()
-sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
-saver.restore(sess, resnet101_model)
+# we assume there's a gpu on offer and a single gpu at that.
+resnet101 = models.resnet101(pretrained=True)
+resnet101_c4 = ResnetC4(resnet101).cuda()
 
 
 def extract_image_resnet101_c4(impath):
@@ -39,7 +23,7 @@ def extract_image_resnet101_c4(impath):
     assert im.dtype == np.uint8
     im = skimage.transform.resize(im, [H, W], preserve_range=True)
     im_val = im[np.newaxis, ...] - channel_mean
-    resnet101_c4_val = resnet101_c4.eval({image_batch: im_val}, sess)
+    resnet101_c4_val = resnet101_c4(im_val).cpu().numpy()
     return resnet101_c4_val
 
 
