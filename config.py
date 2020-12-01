@@ -21,6 +21,7 @@ __C.VOCAB_LAYOUT_FILE = "./clevr_prep/data/vocabulary_layout.txt"
 __C.VOCAB_ANSWER_FILE = "./clevr_prep/data/answers_clevr.txt"
 __C.TRAIN_IMDB_FILE = "./clevr_prep/data/imdb/imdb_train.npy"
 __C.VAL_IMDB_FILE = "./clevr_prep/data/imdb/imdb_val.npy"
+__C.TEST_IMDB_FILE = "./clevr_prep/data/imdb/imdb_test.npy"
 
 __C.USE_FIXED_WORD_EMBED = False
 __C.FIXED_WORD_EMBED_FILE = ""

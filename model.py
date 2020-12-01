@@ -54,7 +54,7 @@ class Model(pl.LightningModule):
         self.init_ctrl = nn.Parameter(torch.ones(cfg.MODEL.LSTM_DIM))
         # metrics
         self.train_acc = pl.metrics.Accuracy()
-        self.valid_acc = pl.metrics.Accuracy()
+        self.val_acc = pl.metrics.Accuracy()
         self.test_acc = pl.metrics.Accuracy()
 
     def forward(self, question, question_mask, image_feats):
