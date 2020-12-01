@@ -1,6 +1,7 @@
 import sys
 
 import pytorch_lightning as pl
+from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import DataLoader
 
 from clevr import PreprocessedClevr, clevr_collate
@@ -37,13 +38,26 @@ num_choices = train_dataset.get_answer_choices()
 module_names = train_dataset.get_module_names()
 vocab_size = train_dataset.get_vocab_size()
 
-model = Model(cfg, num_choices, module_names, vocab_size)
+wandb_logger = WandbLogger(project=cfg.WANDB_PROJECT_NAME)
+
+if cfg.LOAD:
+    model = Model.load_from_checkpoint(
+        cfg.CHECKPOINT_FILENAME,
+        cfg=cfg,
+        num_choices=num_choices,
+        module_names=module_names,
+        num_vocab=vocab_size,
+    )
+else:
+    model = Model(cfg, num_choices, module_names, vocab_size)
+
 trainer = pl.Trainer(
     gpus=1,
     gradient_clip_val=cfg.TRAIN.GRAD_MAX_NORM,
     progress_bar_refresh_rate=20,
     reload_dataloaders_every_epoch=True,
     max_steps=cfg.TRAIN.MAX_ITER,
+    logger=wandb_logger,
 )
 trainer.fit(
     model,

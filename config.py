@@ -25,6 +25,11 @@ __C.VAL_IMDB_FILE = "./clevr_prep/data/imdb/imdb_val.npy"
 __C.USE_FIXED_WORD_EMBED = False
 __C.FIXED_WORD_EMBED_FILE = ""
 
+__C.WANDB_PROJECT_NAME = "snmn-pytorch"
+
+__C.LOAD = False
+__C.CHECKPOINT_FILENAME = ""
+
 # --------------------------------------------------------------------------- #
 # model options
 # --------------------------------------------------------------------------- #
