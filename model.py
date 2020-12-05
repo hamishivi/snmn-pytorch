@@ -4,6 +4,7 @@ from torch.nn import Sequential
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch.nn.modules import module
+import numpy as np
 import wandb
 
 from controller import Controller
@@ -53,7 +54,7 @@ class Model(pl.LightningModule):
 
         # random normal with std dev 1/sqrt(ctrl dim)
         self.init_ctrl = nn.Parameter(
-            torch.randn(cfg.MODEL.LSTM_DIM) * torch.sqrt(1 / cfg.MODEL.LSTM_DIM)
+            torch.randn(cfg.MODEL.LSTM_DIM) * np.sqrt(1 / cfg.MODEL.LSTM_DIM)
         )
         # metrics
         self.train_acc = pl.metrics.Accuracy()
