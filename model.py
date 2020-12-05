@@ -51,7 +51,10 @@ class Model(pl.LightningModule):
             nn.Linear(cfg.MODEL.VQA_OUTPUT_DIM, self.num_choices),
         )
 
-        self.init_ctrl = nn.Parameter(torch.ones(cfg.MODEL.LSTM_DIM))
+        # random normal with std dev 1/sqrt(ctrl dim)
+        self.init_ctrl = nn.Parameter(
+            torch.randn(cfg.MODEL.LSTM_DIM) * torch.sqrt(1 / cfg.MODEL.LSTM_DIM)
+        )
         # metrics
         self.train_acc = pl.metrics.Accuracy()
         self.valid_acc = pl.metrics.Accuracy()

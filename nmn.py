@@ -252,6 +252,7 @@ class NMN(nn.Module):
         4) linearly merge with previous memory vector, find memory
            vector and control state
         """
+        att_stack_old, stack_ptr_old = att_stack, stack_ptr
         # Pop from stack
         att_in = _read_from_stack(att_stack, stack_ptr)
         c_mapped = self.describeone_ci(control_state)
@@ -264,6 +265,8 @@ class NMN(nn.Module):
         att_stack = _write_to_stack(
             att_stack, stack_ptr, self.get_att_zero(kb_batch.size(0), kb_batch.device)
         )
+        if self.cfg.MODEL.NMN.DESCRIBE_ONE.KEEP_STACK:
+            att_stack, stack_ptr = att_stack_old, stack_ptr_old
 
         return att_stack, stack_ptr, mem_out
 
@@ -276,6 +279,7 @@ class NMN(nn.Module):
         4) linearly merge with previous memory vector, find memory
            vector and control state
         """
+        att_stack_old, stack_ptr_old = att_stack, stack_ptr
         # Pop from stack
         att_in_2 = _read_from_stack(att_stack, stack_ptr)
         stack_ptr = _move_ptr_bw(stack_ptr)
@@ -291,6 +295,9 @@ class NMN(nn.Module):
         att_stack = _write_to_stack(
             att_stack, stack_ptr, self.get_att_zero(kb_batch.size(0), kb_batch.device)
         )
+
+        if self.cfg.MODEL.NMN.DESCRIBE_TWO.KEEP_STACK:
+            att_stack, stack_ptr = att_stack_old, stack_ptr_old
 
         return att_stack, stack_ptr, mem_out
 

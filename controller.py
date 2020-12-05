@@ -29,7 +29,6 @@ class Controller(nn.Module):
         )
 
     def forward(self, context, question, control, question_mask, step):
-        question = torch.tanh(self.shared_control_proj(question))
         position_aware = self.position_aware[step](question)
 
         control_question = torch.cat([control, position_aware], 1)
