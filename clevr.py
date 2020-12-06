@@ -118,9 +118,10 @@ def clevr_collate(batch):
     batch_dict["question_inds"] = pad_sequence(
         batch_dict["question_inds"], batch_first=True
     )
-    batch_dict["layout_inds"] = pad_sequence(
-        batch_dict["layout_inds"], batch_first=True
-    )
+    if "layout_inds" in batch_dict:
+        batch_dict["layout_inds"] = pad_sequence(
+            batch_dict["layout_inds"], batch_first=True
+        )
     for k in [
         "seq_length",
         "image_feat",
