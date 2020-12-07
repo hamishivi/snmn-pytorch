@@ -93,3 +93,34 @@ def channels_last_conv(input, fn):
 def channels_last_conv_1d(input, fn):
     output = fn(input.permute([0, 2, 1]))
     return output.permute([0, 2, 1])
+
+
+# copied directly from the original repo, this controls the scale used for the
+# sharpen loss during training (which warms up over time).
+class SharpenLossScaler:
+    def __init__(self, cfg):
+        scaling_type = cfg.TRAIN.SHARPEN_LOSS_SCALING_TYPE
+        if scaling_type == "warmup_scaling":
+            self.warmup_begin_iter = cfg.TRAIN.SHARPEN_SCHEDULE_BEGIN
+            self.warmup_end_iter = cfg.TRAIN.SHARPEN_SCHEDULE_END
+        elif scaling_type == "func_scaling":
+            self.scaling_func = eval(cfg.TRAIN.SHARPEN_LOSS_SCALING_FUNC)
+            assert callable(self.scaling_func)
+        else:
+            raise ValueError("Unknown scaling_type {}".format(scaling_type))
+        self.scaling_type = scaling_type
+
+    def __call__(self, n_iter):
+        if self.scaling_type == "warmup_scaling":
+            return warmup_scaling(n_iter, self.warmup_begin_iter, self.warmup_end_iter)
+        else:
+            return self.scaling_func(n_iter)
+
+
+def warmup_scaling(n_iter, begin_iter, end_iter):
+    if n_iter >= end_iter:
+        return 1.0
+    elif n_iter < begin_iter:
+        return 0.0
+
+    return (n_iter - begin_iter) * 1.0 / (end_iter - begin_iter)

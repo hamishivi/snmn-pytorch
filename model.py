@@ -14,6 +14,7 @@ from utils import (
     get_positional_encoding,
     sequence_mask,
     channels_last_conv,
+    SharpenLossScaler,
 )
 
 
@@ -60,6 +61,8 @@ class Model(pl.LightningModule):
         self.train_acc = pl.metrics.Accuracy()
         self.valid_acc = pl.metrics.Accuracy()
         self.test_acc = pl.metrics.Accuracy()
+        # for loss calc
+        self.sharpen_loss_scaler = SharpenLossScaler(self.cfg)
 
     def forward(self, question, question_mask, image_feats):
         # Input unit - encoding question
@@ -101,8 +104,9 @@ class Model(pl.LightningModule):
         return sharpen_loss
 
     def loss(self, answer_logits, answer_idx, module_logits):
+        sharpen_scale = self.sharpen_loss_scaler(self.global_step)
         loss = F.cross_entropy(answer_logits, answer_idx)
-        loss += self.sharpen_loss(module_logits)
+        loss += self.sharpen_loss(module_logits) * sharpen_scale
         return loss
 
     ## below is the pytorch lightning training code
