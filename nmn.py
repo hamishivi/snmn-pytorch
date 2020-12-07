@@ -1,3 +1,4 @@
+from controller import Controller
 import math
 import numpy as np
 import torch
@@ -49,19 +50,22 @@ class NMN(nn.Module):
         self.module_funcs = [getattr(self, m[1:]) for m in module_names]
         self.module_validity_mat = _build_module_validity_mat(module_names, cfg)
         ## module layers
+        control_dim = cfg.MODEL.KB_DIM
+        if cfg.MODEL.CTRL.USE_WORD_EMBED:
+            control_dim = cfg.MODEL.EMBED_DIM
         # find
-        self.find_ci = nn.Linear(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM)
+        self.find_ci = nn.Linear(control_dim, cfg.MODEL.KB_DIM)
         self.find_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1, 1)
         # transform
-        self.transform_ci = nn.Linear(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM)
+        self.transform_ci = nn.Linear(control_dim, cfg.MODEL.KB_DIM)
         self.transform_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1, 1)
         # scene
         self.scene_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1, 1)
         # describe one
-        self.describeone_ci = nn.Linear(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM)
+        self.describeone_ci = nn.Linear(control_dim, cfg.MODEL.KB_DIM)
         self.describeone_mem = nn.Linear(cfg.MODEL.KB_DIM * 3, cfg.MODEL.NMN.MEM_DIM)
         # describe two
-        self.describetwo_ci = nn.Linear(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM)
+        self.describetwo_ci = nn.Linear(control_dim, cfg.MODEL.KB_DIM)
         self.describetwo_mem = nn.Linear(cfg.MODEL.KB_DIM * 3, cfg.MODEL.NMN.MEM_DIM)
 
     def get_att_zero(self, batch_size, device):
