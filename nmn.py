@@ -133,7 +133,7 @@ class NMN(nn.Module):
         elt_prod = F.normalize(kb_batch * c_mapped, dim=-1, p=2)
         att_out = channels_last_conv(elt_prod, self.find_conv)
         # Push to stack
-        stack_ptr = _move_ptr_fw(stack_ptr)
+        stack_ptr = _move_ptr_fw(stack_ptr, self.cfg)
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
 
         return (
@@ -192,7 +192,7 @@ class NMN(nn.Module):
         """
         # Pop from stack
         att_in_2 = _read_from_stack(att_stack, stack_ptr)
-        stack_ptr = _move_ptr_bw(stack_ptr)
+        stack_ptr = _move_ptr_bw(stack_ptr, self.cfg)
         att_in_1 = _read_from_stack(att_stack, stack_ptr)
         # stack_ptr = _move_ptr_bw(stack_ptr)  # cancel-out below
         att_out = torch.minimum(att_in_1, att_in_2)
@@ -213,7 +213,7 @@ class NMN(nn.Module):
         """
         # Pop from stack
         att_in_2 = _read_from_stack(att_stack, stack_ptr)
-        stack_ptr = _move_ptr_bw(stack_ptr)
+        stack_ptr = _move_ptr_bw(stack_ptr, self.cfg)
         att_in_1 = _read_from_stack(att_stack, stack_ptr)
         att_out = torch.maximum(att_in_1, att_in_2)
         # Push to stack
@@ -234,7 +234,7 @@ class NMN(nn.Module):
             F.normalize(kb_batch, dim=-1, p=2), self.scene_conv
         )
         # Push to stack
-        stack_ptr = _move_ptr_fw(stack_ptr)
+        stack_ptr = _move_ptr_fw(stack_ptr, self.cfg)
         att_stack = _write_to_stack(att_stack, stack_ptr, att_out)
 
         return (
@@ -282,7 +282,7 @@ class NMN(nn.Module):
         att_stack_old, stack_ptr_old = att_stack, stack_ptr
         # Pop from stack
         att_in_2 = _read_from_stack(att_stack, stack_ptr)
-        stack_ptr = _move_ptr_bw(stack_ptr)
+        stack_ptr = _move_ptr_bw(stack_ptr, self.cfg)
         att_in_1 = _read_from_stack(att_stack, stack_ptr)
         c_mapped = self.describetwo_ci(control_state)
         kb_att_in_1 = _extract_softmax_avg(kb_batch, att_in_1)
@@ -302,7 +302,7 @@ class NMN(nn.Module):
         return att_stack, stack_ptr, mem_out
 
 
-def _move_ptr_fw(stack_ptr):
+def _move_ptr_fw(stack_ptr, cfg):
     """
     Move the stack pointer forward (i.e. to push to stack).
     """
@@ -312,10 +312,16 @@ def _move_ptr_fw(stack_ptr):
         stack_ptr.unsqueeze(2).float(),
         lambda x: F.conv1d(x, filter_fw, padding=padding_size).squeeze(2),
     )
+    # when the stack pointer is already at the stack top, keep
+    # the pointer in the same location (otherwise the pointer will be all zero)
+    if cfg.MODEL.NMN.STACK.GUARD_STACK_PTR:
+        stack_len = cfg.MODEL.NMN.STACK.LENGTH
+        stack_top_mask = F.one_hot(stack_len - 1, stack_len)
+        new_stack_ptr += stack_top_mask * stack_ptr
     return new_stack_ptr.squeeze(2)
 
 
-def _move_ptr_bw(stack_ptr):
+def _move_ptr_bw(stack_ptr, cfg):
     """
     Move the stack pointer backward (i.e. to pop from stack).
     """
@@ -325,6 +331,12 @@ def _move_ptr_bw(stack_ptr):
         stack_ptr.unsqueeze(2).float(),
         lambda x: F.conv1d(x, filter_bw, padding=padding_size).squeeze(2),
     )
+    # when the stack pointer is already at the stack bottom, keep
+    # the pointer in the same location (otherwise the pointer will be all zero)
+    if cfg.MODEL.NMN.STACK.GUARD_STACK_PTR:
+        stack_len = cfg.MODEL.NMN.STACK.LENGTH
+        stack_bottom_mask = F.one_hot(0, stack_len)
+        new_stack_ptr += stack_bottom_mask * stack_ptr
     return new_stack_ptr.squeeze(2)
 
 
