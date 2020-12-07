@@ -14,6 +14,9 @@ class Controller(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.num_modules = num_modules
+        control_dim = cfg.MODEL.KB_DIM
+        if cfg.MODEL.CTRL.USE_WORD_EMBED:
+            control_dim = cfg.MODEL.EMBED_DIM
         dim = cfg.MODEL.LSTM_DIM
 
         self.shared_control_proj = linear(dim, dim)
@@ -21,7 +24,7 @@ class Controller(nn.Module):
         for i in range(cfg.MODEL.T_CTRL):
             self.position_aware.append(linear(dim, dim))
 
-        self.control_question = linear(dim * 2, dim)
+        self.control_question = linear(dim + control_dim, dim)
         self.attn = linear(dim, 1)
 
         self.module_fc = nn.Sequential(

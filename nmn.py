@@ -63,10 +63,14 @@ class NMN(nn.Module):
         self.scene_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1, 1)
         # describe one
         self.describeone_ci = nn.Linear(control_dim, cfg.MODEL.KB_DIM)
-        self.describeone_mem = nn.Linear(cfg.MODEL.KB_DIM * 3, cfg.MODEL.NMN.MEM_DIM)
+        self.describeone_mem = nn.Linear(
+            cfg.MODEL.KB_DIM * 2 + control_dim, cfg.MODEL.NMN.MEM_DIM
+        )
         # describe two
         self.describetwo_ci = nn.Linear(control_dim, cfg.MODEL.KB_DIM)
-        self.describetwo_mem = nn.Linear(cfg.MODEL.KB_DIM * 3, cfg.MODEL.NMN.MEM_DIM)
+        self.describetwo_mem = nn.Linear(
+            cfg.MODEL.KB_DIM * 2 + control_dim, cfg.MODEL.NMN.MEM_DIM
+        )
 
     def get_att_zero(self, batch_size, device):
         return torch.zeros(batch_size, self.H, self.W, 1, device=device)
@@ -80,7 +84,7 @@ class NMN(nn.Module):
             batch_size, self.H, self.W, self.stack_len, device=device
         )
         stack_ptr_init = F.one_hot(
-            torch.zeros(batch_size, device=device).long(), self.stack_len
+            torch.zeros(batch_size, device=device, dtype=torch.long), self.stack_len
         )
         mem_init = torch.zeros(batch_size, self.mem_dim, device=device)
         return att_stack_init, stack_ptr_init, mem_init
@@ -315,14 +319,19 @@ def _move_ptr_fw(stack_ptr, cfg):
     new_stack_ptr = channels_last_conv_1d(
         stack_ptr.unsqueeze(2).float(),
         lambda x: F.conv1d(x, filter_fw, padding=padding_size).squeeze(2),
-    )
+    ).squeeze(2)
     # when the stack pointer is already at the stack top, keep
     # the pointer in the same location (otherwise the pointer will be all zero)
     if cfg.MODEL.NMN.STACK.GUARD_STACK_PTR:
         stack_len = cfg.MODEL.NMN.STACK.LENGTH
-        stack_top_mask = F.one_hot(stack_len - 1, stack_len)
+        stack_top_mask = F.one_hot(
+            torch.zeros(stack_ptr.size(0), dtype=torch.long, device=stack_ptr.device)
+            + stack_len
+            - 1,
+            stack_len,
+        )
         new_stack_ptr += stack_top_mask * stack_ptr
-    return new_stack_ptr.squeeze(2)
+    return new_stack_ptr
 
 
 def _move_ptr_bw(stack_ptr, cfg):
@@ -334,14 +343,17 @@ def _move_ptr_bw(stack_ptr, cfg):
     new_stack_ptr = channels_last_conv_1d(
         stack_ptr.unsqueeze(2).float(),
         lambda x: F.conv1d(x, filter_bw, padding=padding_size).squeeze(2),
-    )
+    ).squeeze(2)
     # when the stack pointer is already at the stack bottom, keep
     # the pointer in the same location (otherwise the pointer will be all zero)
     if cfg.MODEL.NMN.STACK.GUARD_STACK_PTR:
         stack_len = cfg.MODEL.NMN.STACK.LENGTH
-        stack_bottom_mask = F.one_hot(0, stack_len)
+        stack_bottom_mask = F.one_hot(
+            torch.zeros(stack_ptr.size(0), dtype=torch.long, device=stack_ptr.device),
+            stack_len,
+        )
         new_stack_ptr += stack_bottom_mask * stack_ptr
-    return new_stack_ptr.squeeze(2)
+    return new_stack_ptr
 
 
 def _read_from_stack(att_stack, stack_ptr):
