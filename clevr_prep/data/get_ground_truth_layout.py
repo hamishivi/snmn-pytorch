@@ -1,5 +1,6 @@
 import json
 import numpy as np
+from tqdm import tqdm
 
 function2module = {
     "filter_color": "_Filter",
@@ -105,9 +106,7 @@ def add_gt_layout(question_file, save_file):
         data = json.load(f)
         questions = data["questions"]
 
-    for n_q, q in enumerate(questions):
-        if (n_q + 1) % 1000 == 0:
-            print("processing %d / %d" % (n_q + 1, len(questions)))
+    for n_q, q in tqdm(enumerate(questions)):
         if "program" in q:
             q["gt_layout"] = linearize_program(q)
 

@@ -4,6 +4,7 @@ import os
 import re
 
 import sys
+from tqdm import tqdm
 
 sys.path.append("../../")  # NOQA
 
@@ -27,9 +28,7 @@ def build_imdb(image_set):
     abs_image_dir = os.path.abspath(image_dir % image_set)
     abs_feature_dir = os.path.abspath(feature_dir % image_set)
     imdb = [None] * len(questions)
-    for n_q, q in enumerate(questions):
-        if (n_q + 1) % 10000 == 0:
-            print("processing %d / %d" % (n_q + 1, len(questions)))
+    for n_q, q in tqdm(enumerate(questions)):
         image_name = q["image_filename"].split(".")[0]
         image_path = os.path.join(abs_image_dir, q["image_filename"])
         feature_path = os.path.join(abs_feature_dir, image_name + ".npy")

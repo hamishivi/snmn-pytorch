@@ -6,6 +6,7 @@ import numpy as np
 import torchvision.models as models
 from resnet_pytorch import ResnetC4
 import torch
+from tqdm import tqdm
 
 channel_mean = np.array([123.68, 116.779, 103.939], dtype=np.float32)
 
@@ -40,9 +41,7 @@ def extract_dataset_resnet101_c4(image_dir, save_dir, ext_filter="*.png"):
     image_list = glob(image_dir + "/" + ext_filter)
     os.makedirs(save_dir, exist_ok=True)
 
-    for n_im, impath in enumerate(image_list):
-        if (n_im + 1) % 100 == 0:
-            print("processing %d / %d" % (n_im + 1, len(image_list)))
+    for n_im, impath in tqdm(enumerate(image_list)):
         image_name = os.path.basename(impath).split(".")[0]
         save_path = os.path.join(save_dir, image_name + ".npy")
         if not os.path.exists(save_path):
