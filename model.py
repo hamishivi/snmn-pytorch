@@ -81,7 +81,7 @@ class Model(pl.LightningModule):
         for i in range(self.steps):
             # Controller and NMN
             control, module_probs = self.controller(
-                lstm_seq, q_vec, control, question_mask, i
+                question, lstm_seq, q_vec, control, question_mask, i
             )
             module_logits.append(module_probs)
             att_stack, stack_ptr, mem = self.nmn(

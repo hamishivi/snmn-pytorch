@@ -28,7 +28,9 @@ class Controller(nn.Module):
             nn.Linear(dim, dim), nn.ELU(), nn.Linear(dim, self.num_modules)
         )
 
-    def forward(self, context, question, control, question_mask, step):
+    def forward(
+        self, embed_context, lstm_context, question, control, question_mask, step
+    ):
         position_aware = self.position_aware[step](question)
 
         control_question = torch.cat([control, position_aware], 1)
@@ -37,12 +39,15 @@ class Controller(nn.Module):
         module_logits = self.module_fc(control_question)
         module_probs = F.softmax(module_logits, 1)
 
-        context_prod = control_question.unsqueeze(1) * context
+        context_prod = control_question.unsqueeze(1) * lstm_context
 
         attn_weight = self.attn(context_prod).squeeze(-1) - 1e30 * (1 - question_mask)
 
         attn = F.softmax(attn_weight, 1).unsqueeze(2)
 
-        next_control = (attn * context).sum(1)
+        if self.cfg.MODEL.CTRL.USE_WORD_EMBED:
+            next_control = (attn * embed_context).sum(1)
+        else:
+            next_control = (attn * lstm_context).sum(1)
 
         return next_control, module_probs
