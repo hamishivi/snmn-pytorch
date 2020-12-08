@@ -41,11 +41,9 @@ clevr_prep/clevr_dataset/
   ...
 ```
 
-2. Extract visual features from the images and store them on the disk. In our experiments, we extract visual features using ResNet-101 C4 block. Then, construct the "expert layout" from ground-truth functional programs, and build image collections (imdb) for CLEVR. These procedures can be down as follows.
+2. Extract visual features from the images and store them on the disk. In our experiments, we extract visual features using ResNet-101 C4 block. Then, construct the "expert layout" from ground-truth functional programs, and build image collections (imdb) for CLEVR. These procedures can be down as follows. *Note that if you did this for the original snmn repo, you should be able to re-use those preprocessed features, since they utilise the same code (the only difference being our use of the pretrained pytorch version of the resnet101 model).*
 
 ```bash
-./clevr_prep/tfmodel/resnet/download_resnet_v1_101.sh  # download ResNet-101
-
 cd ./clevr_prep/data/
 python extract_resnet101_c4.py  # feature extraction
 python get_ground_truth_layout.py  # construct expert policy
@@ -60,7 +58,7 @@ At this point, we can train! Simply run
 python train.py configs/vqa_scratch.yaml
 ```
 
-We use pytorch-lightning to handle training and logging, so take a look at `train.py` and `config.py` to see what training options are used to tune them to your preference. Feel free to make your own config yamls to investigate different hyperparameters and such.
+We use pytorch-lightning to handle training and logging, so take a look at `train.py` and `config.py` to see what training options are used to tune them to your preference. Feel free to make your own config yamls to investigate different hyperparameters and such (I am currently working on extending the codebase to support all the provided configurations).
 
 ## Demo
 
