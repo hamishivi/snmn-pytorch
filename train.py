@@ -7,7 +7,12 @@ from clevr import ClevrDataModule
 from model import Model
 from config import cfg
 
-cfg.merge_from_file(sys.argv[1])  # path to a valid cfg to use
+# set seed for repro
+pl.seed_everything(42)
+
+# cfg prepro (todo: use argparse instead of argv)
+if len(sys.argv) >= 2:
+    cfg.merge_from_file(sys.argv[1])  # path to a valid cfg to use
 cfg.freeze()
 
 clevr = ClevrDataModule(cfg, cfg.TRAIN.BATCH_SIZE)
@@ -39,6 +44,7 @@ trainer = pl.Trainer(
     reload_dataloaders_every_epoch=True,
     max_steps=cfg.TRAIN.MAX_ITER,
     logger=wandb_logger,
+    deterministic=True,
 )
 
 trainer.fit(model, clevr)

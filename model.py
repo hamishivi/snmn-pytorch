@@ -1,3 +1,4 @@
+import json
 import torch
 from torch import nn
 from torch.nn import Sequential
@@ -135,11 +136,14 @@ class Model(pl.LightningModule):
         self.log("train/acc", self.train_acc, on_epoch=True)
         return loss
 
-    def _test_step(self, batch):
+    def _test_step(self, batch, test=False):
         question_inds = batch["question_inds"]
         seq_length = batch["seq_length"]
         image_feat = batch["image_feat"]
-        answer_idx = batch["answer_idx"]
+        if not test:
+            answer_idx = batch["answer_idx"]
+        else:
+            answer_idx = None
         question_mask = sequence_mask(seq_length)
         output_logits, module_logits = self.forward(
             question_inds, question_mask, image_feat
@@ -155,11 +159,10 @@ class Model(pl.LightningModule):
         return answer_logits
 
     def test_step(self, batch, batch_idx):
-        answer_logits, module_logits, answer_idx = self._test_step(batch)
-        loss = self.loss(answer_logits, answer_idx, module_logits)
-        self.test_acc(answer_logits, answer_idx)
-        self.log("test/loss_epoch", loss, on_step=False, on_epoch=True)
-        self.log("test/acc_epoch", self.test_acc, on_step=False, on_epoch=True)
+        # no answers in test. Instead we just save our predictions
+        answer_logits, _, _ = self._test_step(batch, test=True)
+        answer_preds = F.softmax(answer_logits, dim=-1)
+        return answer_preds
 
     def validation_epoch_end(self, validation_step_outputs):
         flattened_logits = torch.flatten(torch.cat(validation_step_outputs))
@@ -169,6 +172,13 @@ class Model(pl.LightningModule):
                 "global_step": self.global_step,
             }
         )
+
+    def test_epoch_end(self, test_step_outputs):
+        flattened_preds = (
+            torch.flatten(torch.cat(test_step_outputs)).cpu().numpy().tolist()
+        )
+        with open("test_preds.json", "w") as w:
+            json.dump(flattened_preds, w)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
