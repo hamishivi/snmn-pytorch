@@ -1,3 +1,4 @@
+from clevr_prep.data.get_ground_truth_layout import add_gt_layout
 import json
 import torch
 from torch import nn
@@ -107,14 +108,21 @@ class Model(pl.LightningModule):
         sharpen_loss = torch.mean(entropy)
         return sharpen_loss
 
-    def loss(self, answer_logits, answer_idx, module_logits):
-        sharpen_scale = self.sharpen_loss_scaler(self.global_step)
+    def loss(self, answer_logits, answer_idx, module_logits, gt_layout):
+        sharpen_scale = (
+            self.sharpen_loss_scaler(self.global_step) * self.cfg.TRAIN.VQA_LOSS_WEIGHT
+        )
         loss = F.cross_entropy(answer_logits, answer_idx)
         if self.cfg.TRAIN.USE_SHARPEN_LOSS:
             loss += (
                 self.sharpen_loss(module_logits)
                 * sharpen_scale
                 * self.cfg.TRAIN.SHARPEN_LOSS_WEIGHT
+            )
+        if self.cfg.USE_GT_LAYOUT:
+            loss += (
+                F.cross_entropy(module_logits, gt_layout)
+                * self.cfg.TRAIN.LAYOUT_LOSS_WEIGHT
             )
         return loss
 
@@ -125,11 +133,12 @@ class Model(pl.LightningModule):
         seq_length = batch["seq_length"]
         image_feat = batch["image_feat"]
         answer_idx = batch["answer_idx"]
+        gt_layout = batch.get("layout_inds", None)
         question_mask = sequence_mask(seq_length)
         output_logits, module_logits = self.forward(
             question_inds, question_mask, image_feat
         )
-        loss = self.loss(output_logits, answer_idx, module_logits)
+        loss = self.loss(output_logits, answer_idx, module_logits, gt_layout)
         # logging
         self.train_acc(output_logits, answer_idx)
         self.log("train/loss", loss, on_epoch=True)
