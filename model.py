@@ -109,11 +109,12 @@ class Model(pl.LightningModule):
     def loss(self, answer_logits, answer_idx, module_logits):
         sharpen_scale = self.sharpen_loss_scaler(self.global_step)
         loss = F.cross_entropy(answer_logits, answer_idx)
-        loss += (
-            self.sharpen_loss(module_logits)
-            * sharpen_scale
-            * self.cfg.TRAIN.SHARPEN_LOSS_WEIGHT
-        )
+        if self.cfg.TRAIN.USE_SHARPEN_LOSS:
+            loss += (
+                self.sharpen_loss(module_logits)
+                * sharpen_scale
+                * self.cfg.TRAIN.SHARPEN_LOSS_WEIGHT
+            )
         return loss
 
     ## below is the pytorch lightning training code

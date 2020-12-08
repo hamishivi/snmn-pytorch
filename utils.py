@@ -96,7 +96,8 @@ def channels_last_conv_1d(input, fn):
 
 
 # copied directly from the original repo, this controls the scale used for the
-# sharpen loss during training (which warms up over time).
+# sharpen loss during training (which warms up over time, and only begins after
+# a certain number of steps).
 class SharpenLossScaler:
     def __init__(self, cfg):
         scaling_type = cfg.TRAIN.SHARPEN_LOSS_SCALING_TYPE
