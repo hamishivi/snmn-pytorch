@@ -118,9 +118,11 @@ class NMN(nn.Module):
         return att_stack_avg, stack_ptr_avg, mem_avg
 
     #### MODULES #####
-    # is there a nicer way to do this? like modules as sub-nnmodules that get dynamically attached?
-    # this above idea is nicer (modules actually being modules), but requires a bit more re-working.
-    # lets get the code working before we try that.
+    # I've copied the original SNMN codebase for this, so each 'module' is simply a function within the NMN module.
+    # However, I think a better way to do things for NMNs in the future would be to make each module a torch module
+    # too. This way, each module's own code could define its input/outputs (rather than the hardcoded dict above),
+    # and define its own layers, rather than having the NMN-specific and module-specific layers mixed as I have here.
+    # I might make this change in the future, but for now I'm leaving this as-is.
 
     def NoOp(self, kb_batch, att_stack, stack_ptr, mem_in, control_state):
         """
