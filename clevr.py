@@ -3,6 +3,7 @@ DataLoader class for CLEVR used in training.
 Also define DataModule for pytorch-lightning-style training.
 """
 import torch
+from torch._C import layout
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
 import pytorch_lightning as pl
@@ -108,7 +109,7 @@ class PreprocessedClevr(Dataset):
 
 
 # pytorch doesnt pad in collate, so we use a custom collate fn
-def clevr_collate(batch):
+def clevr_collate(batch, max_ops, noop_idx):
     batch_dict = {k: [batch[0][k]] for k in batch[0]}
     if len(batch) > 1:
         for k in batch_dict:
@@ -118,10 +119,12 @@ def clevr_collate(batch):
     batch_dict["question_inds"] = pad_sequence(
         batch_dict["question_inds"], batch_first=True
     )
+    # we pad to the max length with the no-op index.
     if "layout_inds" in batch_dict:
-        batch_dict["layout_inds"] = pad_sequence(
-            batch_dict["layout_inds"], batch_first=True
-        )
+        layout_inds = torch.ones(max_ops, len(batch)) * noop_idx
+        for i, b in enumerate(batch):
+            layout_inds[: b["layout_inds"].size(0), i] = b["layout_inds"]
+        batch_dict["layout_inds"] = layout_inds.long()
     for k in [
         "seq_length",
         "image_feat",
@@ -199,19 +202,28 @@ class ClevrDataModule(pl.LightningDataModule):
 
     # we define a separate DataLoader for each of train/val/test
     def train_dataloader(self):
+        noop_idx = self.clevr_train.layout_dict.word2idx("_NoOp")
         clevr_train = DataLoader(
-            self.clevr_train, batch_size=self.batch_size, collate_fn=clevr_collate
+            self.clevr_train,
+            batch_size=self.batch_size,
+            collate_fn=lambda x: clevr_collate(x, self.cfg.MODEL.T_CTRL, noop_idx),
         )
         return clevr_train
 
     def val_dataloader(self):
+        noop_idx = self.clevr_train.layout_dict.word2idx("_NoOp")
         clevr_val = DataLoader(
-            self.clevr_val, batch_size=10 * self.batch_size, collate_fn=clevr_collate
+            self.clevr_val,
+            batch_size=10 * self.batch_size,
+            collate_fn=lambda x: clevr_collate(x, self.cfg.MODEL.T_CTRL, noop_idx),
         )
         return clevr_val
 
     def test_dataloader(self):
+        noop_idx = self.clevr_train.layout_dict.word2idx("_NoOp")
         clevr_test = DataLoader(
-            self.clevr_test, batch_size=10 * self.batch_size, collate_fn=clevr_collate
+            self.clevr_test,
+            batch_size=10 * self.batch_size,
+            collate_fn=lambda x: clevr_collate(x, self.cfg.MODEL.T_CTRL, noop_idx),
         )
         return clevr_test

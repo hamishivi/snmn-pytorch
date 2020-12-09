@@ -119,9 +119,11 @@ class Model(pl.LightningModule):
                 * sharpen_scale
                 * self.cfg.TRAIN.SHARPEN_LOSS_WEIGHT
             )
-        if self.cfg.USE_GT_LAYOUT:
+        if self.cfg.TRAIN.USE_GT_LAYOUT:
             loss += (
-                F.cross_entropy(module_logits, gt_layout)
+                F.cross_entropy(
+                    module_logits.view(-1, module_logits.size(2)), gt_layout.view(-1)
+                )
                 * self.cfg.TRAIN.LAYOUT_LOSS_WEIGHT
             )
         return loss
@@ -161,7 +163,8 @@ class Model(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         answer_logits, module_logits, answer_idx = self._test_step(batch)
-        loss = self.loss(answer_logits, answer_idx, module_logits)
+        gt_layout = batch.get("layout_inds", None)
+        loss = self.loss(answer_logits, answer_idx, module_logits, gt_layout)
         self.valid_acc(answer_logits, answer_idx)
         self.log("valid/loss_epoch", loss, on_step=False, on_epoch=True)
         self.log("valid/acc_epoch", self.valid_acc, on_step=False, on_epoch=True)
