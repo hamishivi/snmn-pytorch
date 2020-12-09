@@ -107,6 +107,9 @@ class PreprocessedClevr(Dataset):
     def get_vocab_size(self):
         return self.vocab_dict.num_vocab
 
+    def get_img_sizes(self):
+        return self.img_H, self.img_W, self.stride_H, self.stride_W
+
 
 # pytorch doesnt pad in collate, so we use a custom collate fn
 def clevr_collate(batch, max_ops, noop_idx):

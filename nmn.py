@@ -78,6 +78,9 @@ class NMN(nn.Module):
     def get_mem_zero(self, batch_size, device):
         return torch.zeros(batch_size, self.mem_dim, device=device)
 
+    def get_stack_value(self, att_stack, stack_ptr):
+        return _read_from_stack(att_stack, stack_ptr)
+
     def get_init_values(self, batch_size, device):
         # the versions of stuff we will use in the forward function.
         att_stack_init = torch.zeros(

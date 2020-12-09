@@ -22,6 +22,7 @@ clevr.setup()
 num_choices = clevr.clevr_module.get_answer_choices()
 module_names = clevr.clevr_module.get_module_names()
 vocab_size = clevr.clevr_module.get_vocab_size()
+img_sizes = clevr.clevr_module.get_img_sizes()
 
 
 if cfg.LOAD:
@@ -33,7 +34,7 @@ if cfg.LOAD:
         num_vocab=vocab_size,
     )
 else:
-    model = Model(cfg, num_choices, module_names, vocab_size)
+    model = Model(cfg, num_choices, module_names, vocab_size, img_sizes)
 
 wandb_logger = WandbLogger(project=cfg.WANDB_PROJECT_NAME, log_model=True)
 
