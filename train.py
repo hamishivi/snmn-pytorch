@@ -1,18 +1,41 @@
 import sys
+import argparse
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 
 from clevr import ClevrDataModule
-from model import Model
+from clevr_model import ClevrModel
 from config import cfg
 
-# set seed for repro
-pl.seed_everything(42)
 
-# cfg prepro (todo: use argparse instead of argv)
-if len(sys.argv) >= 2:
-    cfg.merge_from_file(sys.argv[1])  # path to a valid cfg to use
+# argparse. Currently two arguments: the config and the seed.
+parser = argparse.ArgumentParser(
+    description="Train the SNMN with a given config file and seed."
+)
+parser.add_argument(
+    "config",
+    type=str,
+    nargs="?",
+    default=None,
+    help="config yaml file, see configs folder for examples to use.",
+)
+parser.add_argument(
+    "-s",
+    "--seed",
+    type=int,
+    nargs="?",
+    default=42,
+    help="seed to use for reproducibility. Do not change from default to reproduce results.",
+)
+
+args = parser.parse_args()
+
+# set seed for repro
+pl.seed_everything(args.seed)
+
+if args.config:
+    cfg.merge_from_file(args.config)  # path to a valid cfg to use
 cfg.freeze()
 
 clevr = ClevrDataModule(cfg, cfg.TRAIN.BATCH_SIZE)
@@ -26,7 +49,7 @@ img_sizes = clevr.clevr_module.get_img_sizes()
 
 
 if cfg.LOAD:
-    model = Model.load_from_checkpoint(
+    model = ClevrModel.load_from_checkpoint(
         cfg.CHECKPOINT_FILENAME,
         cfg=cfg,
         num_choices=num_choices,
@@ -34,7 +57,7 @@ if cfg.LOAD:
         num_vocab=vocab_size,
     )
 else:
-    model = Model(cfg, num_choices, module_names, vocab_size, img_sizes)
+    model = ClevrModel(cfg, num_choices, module_names, vocab_size, img_sizes)
 
 wandb_logger = WandbLogger(project=cfg.WANDB_PROJECT_NAME, log_model=True)
 
