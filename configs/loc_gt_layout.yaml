@@ -1,5 +1,6 @@
 MODEL:
   BUILD_LOC: True
+  BUILD_VQA: False
   LOC_SCORES_POS_AFFINE: True
   BBOX_REG_AS_FCN: True
   CTRL:

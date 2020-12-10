@@ -1,9 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import Sequential
-import torch.nn.functional as F
 import pytorch_lightning as pl
-from torch.nn.modules import module
 import numpy as np
 
 from controller import Controller
@@ -94,6 +92,7 @@ class Model(pl.LightningModule):
             att_stack, stack_ptr, mem = self.nmn(
                 control, kb_batch, module_probs, mem, att_stack, stack_ptr
             )
+        outputs = {}
         # output - two layer FC
         output_logits = self.output_unit(torch.cat([q_vec, mem], 1))
         # output for clevr-ref
@@ -111,5 +110,9 @@ class Model(pl.LightningModule):
             bbox_offset_flat = bbox_offset_fcn.view(N * B, 4)
             slice_inds = torch.range(0, N) * B + torch.argmax(loc_scores, dim=-1).long()
             bbox_offset = torch.gather(bbox_offset_flat, slice_inds)
-            return loc_scores, bbox_offset, bbox_offset_fcn, torch.stack(module_logits)
-        return output_logits, torch.stack(module_logits)
+            outputs["loc_scores"] = loc_scores
+            outputs["bbox_offset"] = bbox_offset
+            outputs["bbox_offset_fcn"] = bbox_offset_fcn
+        outputs["logits"] = output_logits
+        outputs["module_logits"] = torch.stack(module_logits)
+        return outputs

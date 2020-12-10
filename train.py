@@ -72,5 +72,3 @@ trainer = pl.Trainer(
 )
 
 trainer.fit(model, clevr)
-
-trainer.test(datamodule=clevr, ckpt_path=None)

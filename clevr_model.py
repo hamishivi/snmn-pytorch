@@ -103,27 +103,27 @@ class ClevrModel(pl.LightningModule):
         bbox_ind = batch.get("bbox_ind", None)
         bbox_gt = batch.get("bbox_batch", None)
         question_mask = sequence_mask(seq_length)
-        # build loc is the flag telling us whether we are using clevr or clevr-ref
-        if not self.cfg.cfg.MODEL.BUILD_LOC:
-            output_logits, module_logits = self.online_model(
-                question_inds, question_mask, image_feat
+        outputs = self.online_model(question_inds, question_mask, image_feat)
+        loss = torch.tensor(0, device=self.device)
+        # we support training on vqa only, loc only, or both, depending on these flags.
+        if self.cfg.MODEL.BUILD_VQA:
+            loss += self.loss(
+                outputs["logits"], answer_idx, outputs["module_logits"], gt_layout
             )
-            loss = self.loss(output_logits, answer_idx, module_logits, gt_layout)
-            # logging
-            self.train_acc(output_logits, answer_idx)
-            self.log("train/loss", loss, on_epoch=True)
-            self.log("train/acc", self.train_acc, on_epoch=True)
-        else:
-            loc_scores, bbox_offset, _, module_logits = self.online_model(
-                question_inds, question_mask, image_feat
-            )
-            loss = self.loc_loss(
-                loc_scores, bbox_ind, bbox_offset, module_logits, gt_layout
+            self.train_acc(outputs["logits"], answer_idx)
+            self.log("train/vqa_acc", self.train_acc, on_epoch=True)
+        if self.cfg.MODEL.BUILD_LOC:
+            loss += self.loc_loss(
+                outputs["loc_scores"],
+                bbox_ind,
+                outputs["bbox_offset"],
+                outputs["module_logits"],
+                gt_layout,
             )
             img_h, img_w, stride_h, stride_w = self.img_sizes
             bbox_pred = batch_feat_grid2bbox(
-                torch.argmax(loc_scores, 1),
-                bbox_offset,
+                torch.argmax(outputs["loc_scores"], 1),
+                outputs["bbox_offset"],
                 stride_h,
                 stride_w,
                 img_h,
@@ -132,55 +132,44 @@ class ClevrModel(pl.LightningModule):
             accuracy = torch.mean(
                 batch_bbox_iou(bbox_pred, bbox_gt) >= self.cfg.TRAIN.BBOX_IOU_THRESH
             )
-            self.log("train/loss", loss, on_epoch=True)
-            self.log("train/acc", accuracy, on_epoch=True)
+            self.log("train/loc_acc", accuracy, on_epoch=True)
+        self.log("train/loss", loss, on_epoch=True)
         return loss
 
-    def _test_step_vqa(self, batch):
+    def _test_step(self, batch):
         question_inds = batch["question_inds"]
         seq_length = batch["seq_length"]
         image_feat = batch["image_feat"]
-        answer_idx = batch.get("answer_idx", None)
         question_mask = sequence_mask(seq_length)
-        output_logits, module_logits = self.offline_model(
-            question_inds, question_mask, image_feat
-        )
-        return output_logits, module_logits, answer_idx
-
-    def _test_step_loc(self, batch, test=False):
-        question_inds = batch["question_inds"]
-        seq_length = batch["seq_length"]
-        image_feat = batch["image_feat"]
-        bbox_ind = batch.get("bbox_ind", None)
-        bbox_gt = batch.get("bbox_batch", None)
-        question_mask = sequence_mask(seq_length)
-        loc_scores, bbox_offset, _, module_logits = self.offline_model(
-            question_inds, question_mask, image_feat
-        )
-        return loc_scores, bbox_offset, module_logits, bbox_ind, bbox_gt
+        outputs = self.offline_model(question_inds, question_mask, image_feat)
+        return outputs
 
     def validation_step(self, batch, batch_idx):
         gt_layout = batch.get("layout_inds", None)
-        # build loc is the flag telling us whether we are using clevr or clevr-ref
-        if not self.cfg.MODEL.BUILD_LOC:
-            answer_logits, module_logits, answer_idx = self._test_step(batch)
-            # logging
-            loss = self.loss(answer_logits, answer_idx, module_logits, gt_layout)
-            self.valid_acc(answer_logits, answer_idx)
-            self.log("valid/loss_epoch", loss, on_step=False, on_epoch=True)
-            self.log("valid/acc_epoch", self.valid_acc, on_step=False, on_epoch=True)
-            return answer_logits
-        else:
-            loc_scores, bbox_offset, module_logits, bbox_ind, bbox_gt = self._test_step(
-                batch
+        answer_idx = batch.get("answer_idx", None)
+        bbox_ind = batch.get("bbox_ind", None)
+        bbox_gt = batch.get("bbox_gt", None)
+        outputs = self._test_step(batch)
+        loss = torch.tensor(0, device=self.device)
+        # we support training on vqa only, loc only, or both, depending on these flags.
+        if self.cfg.MODEL.BUILD_VQA:
+            loss += self.loss(
+                outputs["logits"], answer_idx, outputs["module_logits"], gt_layout
             )
-            loss = self.loc_loss(
-                loc_scores, bbox_ind, bbox_offset, module_logits, gt_layout
+            self.valid_acc(outputs["logits"], answer_idx)
+            self.log("valid/vqa_acc", self.valid_acc, on_step=False, on_epoch=True)
+        if self.cfg.MODEL.BUILD_LOC:
+            loss += self.loc_loss(
+                outputs["loc_scores"],
+                bbox_ind,
+                outputs["bbox_offset"],
+                outputs["module_logits"],
+                gt_layout,
             )
             img_h, img_w, stride_h, stride_w = self.img_sizes
             bbox_pred = batch_feat_grid2bbox(
-                torch.argmax(loc_scores, 1),
-                bbox_offset,
+                torch.argmax(outputs["loc_scores"], 1),
+                outputs["bbox_offset"],
                 stride_h,
                 stride_w,
                 img_h,
@@ -189,19 +178,11 @@ class ClevrModel(pl.LightningModule):
             accuracy = torch.mean(
                 batch_bbox_iou(bbox_pred, bbox_gt) >= self.cfg.TRAIN.BBOX_IOU_THRESH
             )
-            self.log("valid/loss", loss, on_epoch=True)
-            self.log("valid/acc", accuracy, on_epoch=True)
-            return None
-
-    def test_step(self, batch, batch_idx):
-        if not self.cfg.MODEL.BUILD_LOC:
-            # no answers in test. Instead we just save our predictions
-            answer_logits, _, _ = self._test_step(batch, test=True)
-            answer_preds = F.softmax(answer_logits, dim=-1)
-            return answer_preds
+            self.log("valid/loc_acc", accuracy, on_step=False, on_epoch=True)
+        self.log("valid/loss", loss, on_step=False, on_epoch=True)
 
     def validation_epoch_end(self, validation_step_outputs):
-        if not self.cfg.MODEL.BUILD_LOC:
+        if self.cfg.MODEL.BUILD_VQA:
             flattened_logits = torch.flatten(torch.cat(validation_step_outputs))
             self.logger.experiment.log(
                 {
@@ -211,7 +192,7 @@ class ClevrModel(pl.LightningModule):
             )
 
     def test_epoch_end(self, test_step_outputs):
-        if not self.cfg.MODEL.BUILD_LOC:
+        if self.cfg.MODEL.BUILD_VQA:
             flattened_preds = (
                 torch.flatten(torch.cat(test_step_outputs)).cpu().numpy().tolist()
             )
