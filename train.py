@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 
 from clevr import ClevrDataModule
-from model import Model
+from clevr_model import ClevrModel
 from config import cfg
 
 # set seed for repro
@@ -25,7 +25,7 @@ vocab_size = clevr.clevr_module.get_vocab_size()
 
 
 if cfg.LOAD:
-    model = Model.load_from_checkpoint(
+    model = ClevrModel.load_from_checkpoint(
         cfg.CHECKPOINT_FILENAME,
         cfg=cfg,
         num_choices=num_choices,
@@ -33,7 +33,7 @@ if cfg.LOAD:
         num_vocab=vocab_size,
     )
 else:
-    model = Model(cfg, num_choices, module_names, vocab_size)
+    model = ClevrModel(cfg, num_choices, module_names, vocab_size)
 
 wandb_logger = WandbLogger(project=cfg.WANDB_PROJECT_NAME, log_model=True)
 
