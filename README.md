@@ -55,10 +55,24 @@ cd ../../
 
 At this point, we can train! Simply run
 ```bash
-python train.py configs/vqa_scratch.yaml
+python train.py configs/<config name>
 ```
 
-We use pytorch-lightning to handle training and logging, so take a look at `train.py` and `config.py` to see what training options are used to tune them to your preference. Feel free to make your own config yamls to investigate different hyperparameters and such (I am currently working on extending the codebase to support all the provided configurations).
+Where the config file is one of the files present in the `configs` directory. Look below for short explanations on each config and expected performance on each. Feel free to make your own config yamls to investigate different hyperparameters and such! We also use pytorch-lightning to handle training and logging, so take a look at `train.py` and `config.py` to see what training options are used to tune them to your preference.
+
+## Results
+
+As this is a re-implementation, performance is not exactly the same as reported in the original repository. See the table below for the expected performance on our implementation and the original implementation for each provided config file. For the joint configs (which have two metrics as they jointly train on two tasks), we provide the VQA (aka regular CLEVR) accuracy first, and then the CLEVR-ref accuracy.
+
+| Config | Description | Original Performance | Our Performance |
+| ------ | ----------- | -------------------- | --------------- |
+| `vqa_scratch` | regular CLEVR dataset, training on final answers. | 93.0% | - |
+| `vqa_gt_layout` | regular CLEVR dataset, training on final answers and ground truth module layouts. | 96.6% | - |
+| `loc_scratch` | CLEVR-ref dataset, training on bounding boxes. | 93.4% | - |
+| `loc_gt_layout` | CLEVR-ref dataset, training on bounding boxes and ground truth module layouts. | 96.0% | - |
+| `joint_scratch` | CLEVR + CLEVR-ref together, training on final answers and bounding boxes. |  93.9% / 95.4% | - |
+| `joint_gt_layout` | CLEVR + CLEVR-ref together, training on answers, bounding boxes, and ground truth module layouts. | 96.5% / 96.2% | - |
+
 
 ## Demo
 
