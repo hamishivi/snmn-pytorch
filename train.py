@@ -1,4 +1,5 @@
 import sys
+import argparse
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
@@ -7,12 +8,34 @@ from clevr import ClevrDataModule
 from clevr_model import ClevrModel
 from config import cfg
 
-# set seed for repro
-pl.seed_everything(42)
 
-# cfg prepro (todo: use argparse instead of argv)
-if len(sys.argv) >= 2:
-    cfg.merge_from_file(sys.argv[1])  # path to a valid cfg to use
+# argparse. Currently two arguments: the config and the seed.
+parser = argparse.ArgumentParser(
+    description="Train the SNMN with a given config file and seed."
+)
+parser.add_argument(
+    "config",
+    type=str,
+    nargs="?",
+    default=None,
+    help="config yaml file, see configs folder for examples to use.",
+)
+parser.add_argument(
+    "-s",
+    "--seed",
+    type=int,
+    nargs="?",
+    default=42,
+    help="seed to use for reproducibility. Do not change from default to reproduce results.",
+)
+
+args = parser.parse_args()
+
+# set seed for repro
+pl.seed_everything(args.seed)
+
+if args.config:
+    cfg.merge_from_file(args.config)  # path to a valid cfg to use
 cfg.freeze()
 
 clevr = ClevrDataModule(cfg, cfg.TRAIN.BATCH_SIZE)
