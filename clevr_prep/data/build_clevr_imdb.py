@@ -34,7 +34,7 @@ def build_imdb(image_set):
         feature_path = os.path.join(abs_feature_dir, image_name + ".npy")
         question_str = q["question"]
         question_tokens = tokenize(question_str)
-        answer = q["answer"] if "answer" in q else None
+        bbox = q["bbox"] if "bbox" in q else None
         gt_layout_tokens = q["gt_layout"] if "gt_layout" in q else None
 
         iminfo = dict(
@@ -43,7 +43,7 @@ def build_imdb(image_set):
             feature_path=feature_path,
             question_str=question_str,
             question_tokens=question_tokens,
-            answer=answer,
+            bbox=bbox,
             gt_layout_tokens=gt_layout_tokens,
         )
         imdb[n_q] = iminfo
