@@ -24,7 +24,9 @@ wandb login
 
 Note that theoretically you can save the results from this step, but the outputs are large (> 70gig), so I have not done this. This is hard-coded to use a single gpu currently.
 
-1. Download the CLEVR dataset from http://cs.stanford.edu/people/jcjohns/clevr/, and symbol link it to clevr_prep/clevr_dataset. After this step, the file structure should look like
+#### CLEVR Dataset
+
+1. Download the CLEVR dataset from http://cs.stanford.edu/people/jcjohns/clevr/, and symlink it to `clevr_prep/clevr_dataset`. After this step, the file structure should look like
 
 ```
 clevr_prep/clevr_dataset/
@@ -45,9 +47,39 @@ clevr_prep/clevr_dataset/
 
 ```bash
 cd ./clevr_prep/data/
-python extract_resnet101_c4.py  # feature extraction
+python extract_resnet101_c4.py # feature extraction
 python get_ground_truth_layout.py  # construct expert policy
 python build_clevr_imdb.py  # build image collections
+cd ../../
+```
+
+#### CLEVR-ref Dataset
+
+The CLEVR-ref dataset is processed in largely the same way, but uses a different dataset.
+
+1. First, download it from http://people.eecs.berkeley.edu/~ronghang/projects/snmn/CLEVR_loc.tgz, and then symlink it to `clevr_prep/clevr_loc_dataset`. After this step, the file structure should look like:
+```
+exp_clevr_snmn/clevr_loc_dataset/
+  images/
+    loc_train/
+      CLEVR_loc_train_000000.png
+      ...
+    loc_val/
+    loc_test/
+  questions/
+    CLEVR_loc_train_questions.json
+    CLEVR_loc_val_questions.json
+    CLEVR_loc_test_questions.json
+  ...
+```
+
+2. Again, extract the features from the images and store them on disk. Again, we re-use the code from the original SNMN repository, so you should be able to use these features for that code and vice-versa.
+
+```bash
+cd ./clevr_prep/data/
+python extract_resnet101_c4.py --loc
+python get_ground_truth_layout.py  --loc
+python build_clevr_imdb.py  --loc
 cd ../../
 ```
 
@@ -58,7 +90,7 @@ At this point, we can train! Simply run
 python train.py configs/<config name>
 ```
 
-Where the config file is one of the files present in the `configs` directory. Look below for short explanations on each config and expected performance on each. Feel free to make your own config yamls to investigate different hyperparameters and such! We also use pytorch-lightning to handle training and logging, so take a look at `train.py` and `config.py` to see what training options are used to tune them to your preference.
+Where the config file is one of the files present in the `configs` directory. Look below for short explanations on each config and expected performance on each.  **Note that you'll need to have downloaded the regular CLEVR dataset for the VQA and joint configs, and the CLEVR-ref dataset for the loc and joint configs.** Feel free to make your own config yamls to investigate different hyperparameters and such! We also use pytorch-lightning to handle training and logging, so take a look at `train.py` and `config.py` to see what training options are used to tune them to your preference.
 
 ## Results
 

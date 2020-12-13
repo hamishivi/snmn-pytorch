@@ -3,7 +3,6 @@ DataLoader class for CLEVR used in training.
 Also define DataModule for pytorch-lightning-style training.
 """
 import torch
-from torch._C import layout
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
 import pytorch_lightning as pl
@@ -141,6 +140,25 @@ def clevr_collate(batch, max_ops, noop_idx):
     return batch_dict
 
 
+# dataset code for joint
+class ConcatDataset(torch.utils.data.Dataset):
+    def __init__(self, clevr_dataset, clevr_ref_dataset):
+        self.clevr = clevr_dataset
+        self.clevr_ref = clevr_ref_dataset
+
+    def __getitem__(self, i):
+        return {"vqa": self.clevr[i], "loc": self.clevr_ref[i]}
+
+    def __len__(self):
+        return min(len(self.clevr), len(self.clevr_ref))
+
+
+def joint_collate(batch, max_ops, noop_idx):
+    vqa_dict = clevr_collate([b["vqa"] for b in batch], max_ops, noop_idx)
+    loc_dict = clevr_collate([b["loc"] for b in batch], max_ops, noop_idx)
+    return {"vqa": vqa_dict, "loc": loc_dict}
+
+
 def bbox2feat_grid(bbox, stride_H, stride_W, feat_H, feat_W):
     x1, y1, w, h = bbox
     x2 = x1 + w - 1
@@ -163,70 +181,89 @@ class ClevrDataModule(pl.LightningDataModule):
         self.cfg = cfg
         self.batch_size = batch_size
 
-    def setup(self, stage=None):
-        # we set up only relevant datasets when stage is specified
-        if stage == "fit" or stage is None:
-            self.clevr_train = PreprocessedClevr(
-                self.cfg.TRAIN_IMDB_FILE,
-                self.cfg.VOCAB_QUESTION_FILE,
-                self.cfg.MODEL.T_ENCODER,
-                self.cfg.MODEL.T_CTRL,
-                True,
-                self.cfg.VOCAB_ANSWER_FILE,
-                self.cfg.VOCAB_LAYOUT_FILE,
-                self.cfg.MODEL.H_FEAT,
-                self.cfg.MODEL.W_FEAT,
+    def _construct_clevr_(self, filename):
+        return PreprocessedClevr(
+            filename,
+            self.cfg.VOCAB_QUESTION_FILE,
+            self.cfg.MODEL.T_ENCODER,
+            self.cfg.MODEL.T_CTRL,
+            True,
+            self.cfg.VOCAB_ANSWER_FILE,
+            self.cfg.VOCAB_LAYOUT_FILE,
+            self.cfg.MODEL.H_FEAT,
+            self.cfg.MODEL.W_FEAT,
+        )
+
+    def _construct_joint_(self, filename_vqa, filename_loc):
+        clevr = PreprocessedClevr(
+            filename_vqa,
+            self.cfg.VOCAB_QUESTION_FILE,
+            self.cfg.MODEL.T_ENCODER,
+            self.cfg.MODEL.T_CTRL,
+            True,
+            self.cfg.VOCAB_ANSWER_FILE,
+            self.cfg.VOCAB_LAYOUT_FILE,
+            self.cfg.MODEL.H_FEAT,
+            self.cfg.MODEL.W_FEAT,
+        )
+        loc = PreprocessedClevr(
+            filename_loc,
+            self.cfg.VOCAB_QUESTION_FILE,
+            self.cfg.MODEL.T_ENCODER,
+            self.cfg.MODEL.T_CTRL,
+            True,
+            self.cfg.VOCAB_ANSWER_FILE,
+            self.cfg.VOCAB_LAYOUT_FILE,
+            self.cfg.MODEL.H_FEAT,
+            self.cfg.MODEL.W_FEAT,
+        )
+        return ConcatDataset(clevr, loc)
+
+    def setup(self, dataset, stage=None):
+        assert dataset in ["vqa", "loc", "joint"]
+        if dataset == "vqa":
+            self.clevr_train = self._construct_clevr_(self.cfg.TRAIN_IMDB_FILE)
+            self.clevr_val = self._construct_clevr_(self.cfg.VAL_IMDB_FILE)
+            self.clevr_test = self._construct_clevr_(self.cfg.TEST_IMDB_FILE)
+            self.clevr_module = self.clevr_train
+            noop_idx = self.levr_train.layout_dict.word2idx("_NoOp")
+            self.collate = lambda x: clevr_collate(x, self.cfg.MODEL.T_CTRL, noop_idx)
+        elif dataset == "loc":
+            self.clevr_train = self._construct_clevr_(self.cfg.TRAIN_LOC_IMDB_FILE)
+            self.clevr_val = self._construct_clevr_(self.cfg.VAL_LOC_IMDB_FILE)
+            self.clevr_test = self._construct_clevr_(self.cfg.TEST_LOC_IMDB_FILE)
+            self.clevr_module = self.clevr_train
+            noop_idx = self.levr_train.layout_dict.word2idx("_NoOp")
+            self.collate = lambda x: clevr_collate(x, self.cfg.MODEL.T_CTRL, noop_idx)
+        else:
+            self.clevr_train = self._construct_joint_(
+                self.cfg.TRAIN_IMDB_FILE, self.cfg.TRAIN_LOC_IMDB_FILE
             )
-            self.clevr_val = PreprocessedClevr(
-                self.cfg.VAL_IMDB_FILE,
-                self.cfg.VOCAB_QUESTION_FILE,
-                self.cfg.MODEL.T_ENCODER,
-                self.cfg.MODEL.T_CTRL,
-                True,
-                self.cfg.VOCAB_ANSWER_FILE,
-                self.cfg.VOCAB_LAYOUT_FILE,
-                self.cfg.MODEL.H_FEAT,
-                self.cfg.MODEL.W_FEAT,
+            self.clevr_val = self._construct_joint_(
+                self.cfg.VAL_IMDB_FILE, self.cfg.VAL_LOC_IMDB_FILE
+            )
+            self.clevr_test = self._construct_joint_(
+                self.cfg.TEST_IMDB_FILE, self.cfg.TEST_LOC_IMDB_FILE
             )
             self.clevr_module = self.clevr_train
-        if stage == "test" or stage is None:
-            self.clevr_test = PreprocessedClevr(
-                self.cfg.TEST_IMDB_FILE,
-                self.cfg.VOCAB_QUESTION_FILE,
-                self.cfg.MODEL.T_ENCODER,
-                self.cfg.MODEL.T_CTRL,
-                True,
-                self.cfg.VOCAB_ANSWER_FILE,
-                self.cfg.VOCAB_LAYOUT_FILE,
-                self.cfg.MODEL.H_FEAT,
-                self.cfg.MODEL.W_FEAT,
-            )
-            self.clevr_module = self.clevr_test
+            noop_idx = self.levr_train.layout_dict.word2idx("_NoOp")
+            self.collate = lambda x: joint_collate(x, self.cfg.MODEL.T_CTRL, noop_idx)
 
     # we define a separate DataLoader for each of train/val/test
     def train_dataloader(self):
-        noop_idx = self.clevr_train.layout_dict.word2idx("_NoOp")
         clevr_train = DataLoader(
-            self.clevr_train,
-            batch_size=self.batch_size,
-            collate_fn=lambda x: clevr_collate(x, self.cfg.MODEL.T_CTRL, noop_idx),
+            self.clevr_train, batch_size=self.batch_size, collate_fn=self.collate
         )
         return clevr_train
 
     def val_dataloader(self):
-        noop_idx = self.clevr_train.layout_dict.word2idx("_NoOp")
         clevr_val = DataLoader(
-            self.clevr_val,
-            batch_size=10 * self.batch_size,
-            collate_fn=lambda x: clevr_collate(x, self.cfg.MODEL.T_CTRL, noop_idx),
+            self.clevr_val, batch_size=10 * self.batch_size, collate_fn=self.collate
         )
         return clevr_val
 
     def test_dataloader(self):
-        noop_idx = self.clevr_train.layout_dict.word2idx("_NoOp")
         clevr_test = DataLoader(
-            self.clevr_test,
-            batch_size=10 * self.batch_size,
-            collate_fn=lambda x: clevr_collate(x, self.cfg.MODEL.T_CTRL, noop_idx),
+            self.clevr_test, batch_size=10 * self.batch_size, collate_fn=self.collate
         )
         return clevr_test

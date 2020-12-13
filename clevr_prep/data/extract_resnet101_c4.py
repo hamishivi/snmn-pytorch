@@ -1,19 +1,53 @@
 import os
+import sys
 from glob import glob
+import argparse
+
 import skimage.io
 import skimage.transform
 import numpy as np
-import torchvision.models as models
-from resnet_pytorch import ResnetC4
 import torch
+from torch import nn
+import torchvision.models as models
 from tqdm import tqdm
 
 channel_mean = np.array([123.68, 116.779, 103.939], dtype=np.float32)
 
-image_basedir = "../clevr_dataset/images/"
+parser = argparse.ArgumentParser(
+    description="Extract conv features for clevr or clevr-ref"
+)
+parser.add_argument(
+    "--loc",
+    action="store_true",
+    help="if used, extract features from clevr-ref dataset rather than regular clevr.",
+)
+
+
+args = parser.parse_args()
+
+if args.loc:
+    image_basedir = "../clevr_loc_dataset/images/"
+else:
+    image_basedir = "../clevr_dataset/images/"
+
 save_basedir = "./resnet101_c4/"
 H = 224
 W = 224
+
+
+# class to extract the fourth filter vals out of resnet.
+class ResnetC4(nn.Module):
+    def __init__(self, resnet):
+        super().__init__()
+        self.features = nn.Sequential(
+            # stop at conv4
+            *list(resnet.children())[:-3]
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
 
 # we assume there's a gpu on offer and a single gpu at that.
 resnet101 = models.resnet101(pretrained=True)
@@ -49,7 +83,10 @@ def extract_dataset_resnet101_c4(image_dir, save_dir, ext_filter="*.png"):
             np.save(save_path, resnet101_c4_val)
 
 
-for image_set in ["train", "val", "test"]:
+image_sets = ["train", "val", "test"]
+if args.loc:
+    image_sets = ["loc_train", "loc_val", "loc_test"]
+for image_set in image_sets:
     print("Extracting image set " + image_set)
     extract_dataset_resnet101_c4(
         os.path.join(image_basedir, image_set), os.path.join(save_basedir, image_set)

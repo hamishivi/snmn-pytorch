@@ -1,4 +1,5 @@
 import json
+import argparse
 import numpy as np
 from tqdm import tqdm
 
@@ -114,14 +115,35 @@ def add_gt_layout(question_file, save_file):
         json.dump(data, f)
 
 
-question_file_trn = "../clevr_dataset/questions/CLEVR_train_questions.json"
-save_file_trn = "./CLEVR_train_questions_gt_layout.json"
+parser = argparse.ArgumentParser(
+    description="Extract construct module ground truth layouts for clevr or clevr-ref."
+)
+parser.add_argument(
+    "--loc",
+    action="store_true",
+    help="if used, extract features from clevr-ref dataset rather than regular clevr.",
+)
+args = parser.parse_args()
+
+
+dataset = "CLEVR"
+if args.loc:
+    dataset = "CLEVR_loc"
+
+question_file_trn = (
+    f"../{dataset.lower()}_dataset/questions/{dataset}_train_questions.json"
+)
+save_file_trn = f"./{dataset}_train_questions_gt_layout.json"
 add_gt_layout(question_file_trn, save_file_trn)
 
-question_file_val = "../clevr_dataset/questions/CLEVR_val_questions.json"
-save_file_val = "./CLEVR_val_questions_gt_layout.json"
+question_file_val = (
+    f"../{dataset.lower()}_dataset/questions/{dataset}_val_questions.json"
+)
+save_file_val = f"./{dataset}_val_questions_gt_layout.json"
 add_gt_layout(question_file_val, save_file_val)
 
-question_file_tst = "../clevr_dataset/questions/CLEVR_test_questions.json"
-save_file_tst = "./CLEVR_test_questions_gt_layout.json"
+question_file_tst = (
+    f"../{dataset.lower()}_dataset/questions/{dataset}_test_questions.json"
+)
+save_file_tst = f"./{dataset}_test_questions_gt_layout.json"
 add_gt_layout(question_file_tst, save_file_tst)

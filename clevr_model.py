@@ -98,7 +98,7 @@ class ClevrModel(pl.LightningModule):
         question_inds = batch["question_inds"]
         seq_length = batch["seq_length"]
         image_feat = batch["image_feat"]
-        answer_idx = batch["answer_idx"]
+        answer_idx = batch.get("answer_idx", None)
         gt_layout = batch.get("layout_inds", None)
         bbox_ind = batch.get("bbox_ind", None)
         bbox_gt = batch.get("bbox_batch", None)
@@ -106,13 +106,13 @@ class ClevrModel(pl.LightningModule):
         outputs = self.online_model(question_inds, question_mask, image_feat)
         loss = torch.tensor(0, device=self.device)
         # we support training on vqa only, loc only, or both, depending on these flags.
-        if self.cfg.MODEL.BUILD_VQA:
+        if self.cfg.MODEL.BUILD_VQA and answer_idx is not None:
             loss += self.loss(
                 outputs["logits"], answer_idx, outputs["module_logits"], gt_layout
             )
             self.train_acc(outputs["logits"], answer_idx)
             self.log("train/vqa_acc", self.train_acc, on_epoch=True)
-        if self.cfg.MODEL.BUILD_LOC:
+        if self.cfg.MODEL.BUILD_LOC and bbox_ind is not None:
             loss += self.loc_loss(
                 outputs["loc_scores"],
                 bbox_ind,
