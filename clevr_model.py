@@ -63,7 +63,9 @@ class ClevrModel(pl.LightningModule):
         N = bbox_offset_fcn.size(0)
         B = bbox_offset_fcn.size(1)
         bbox_offset_fcn = bbox_offset_fcn.view(-1, 4)
-        slice_inds = (torch.arange(0, N) * B + bbox_ind_batch).long()
+        slice_inds = (
+            torch.arange(0, N, device=self.device) * B + bbox_ind_batch
+        ).long()
         bbox_offset_sliced = bbox_offset_fcn[slice_inds]
         loss += (
             F.mse_loss(bbox_offset_sliced, bbox_offset)
