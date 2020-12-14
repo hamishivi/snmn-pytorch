@@ -39,7 +39,7 @@ if args.config:
 cfg.freeze()
 
 clevr = ClevrDataModule(cfg, cfg.TRAIN.BATCH_SIZE)
-clevr.setup(cfg.dataset)
+clevr.setup()
 
 # really these should be exposed in the data module...
 num_choices = clevr.clevr_module.get_answer_choices()

@@ -219,21 +219,22 @@ class ClevrDataModule(pl.LightningDataModule):
         )
         return ConcatDataset(clevr, loc)
 
-    def setup(self, dataset, stage=None):
+    def setup(self, stage=None):
+        dataset = self.cfg.DATASET
         assert dataset in ["vqa", "loc", "joint"]
         if dataset == "vqa":
             self.clevr_train = self._construct_clevr_(self.cfg.TRAIN_IMDB_FILE)
             self.clevr_val = self._construct_clevr_(self.cfg.VAL_IMDB_FILE)
             self.clevr_test = self._construct_clevr_(self.cfg.TEST_IMDB_FILE)
             self.clevr_module = self.clevr_train
-            noop_idx = self.levr_train.layout_dict.word2idx("_NoOp")
+            noop_idx = self.clevr_train.layout_dict.word2idx("_NoOp")
             self.collate = lambda x: clevr_collate(x, self.cfg.MODEL.T_CTRL, noop_idx)
         elif dataset == "loc":
             self.clevr_train = self._construct_clevr_(self.cfg.TRAIN_LOC_IMDB_FILE)
             self.clevr_val = self._construct_clevr_(self.cfg.VAL_LOC_IMDB_FILE)
             self.clevr_test = self._construct_clevr_(self.cfg.TEST_LOC_IMDB_FILE)
             self.clevr_module = self.clevr_train
-            noop_idx = self.levr_train.layout_dict.word2idx("_NoOp")
+            noop_idx = self.clevr_train.layout_dict.word2idx("_NoOp")
             self.collate = lambda x: clevr_collate(x, self.cfg.MODEL.T_CTRL, noop_idx)
         else:
             self.clevr_train = self._construct_joint_(
@@ -246,7 +247,7 @@ class ClevrDataModule(pl.LightningDataModule):
                 self.cfg.TEST_IMDB_FILE, self.cfg.TEST_LOC_IMDB_FILE
             )
             self.clevr_module = self.clevr_train
-            noop_idx = self.levr_train.layout_dict.word2idx("_NoOp")
+            noop_idx = self.clevr_train.layout_dict.word2idx("_NoOp")
             self.collate = lambda x: joint_collate(x, self.cfg.MODEL.T_CTRL, noop_idx)
 
     # we define a separate DataLoader for each of train/val/test

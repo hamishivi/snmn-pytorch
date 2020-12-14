@@ -45,7 +45,13 @@ class ClevrModel(pl.LightningModule):
         return sharpen_loss
 
     def loc_loss(
-        self, loc_scores, bbox_ind_batch, bbox_offset, module_logits, gt_layout
+        self,
+        loc_scores,
+        bbox_offset_fcn,
+        bbox_ind_batch,
+        bbox_offset,
+        module_logits,
+        gt_layout,
     ):
         sharpen_scale = (
             self.sharpen_loss_scaler(self.global_step) * self.cfg.TRAIN.VQA_LOSS_WEIGHT
@@ -54,8 +60,13 @@ class ClevrModel(pl.LightningModule):
             F.cross_entropy(loc_scores, bbox_ind_batch)
             * self.cfg.TRAIN.BBOX_IND_LOSS_WEIGHT
         )
+        N = bbox_offset_fcn.size(0)
+        B = bbox_offset_fcn.size(1)
+        bbox_offset_fcn = bbox_offset_fcn.view(-1, 4)
+        slice_inds = (torch.arange(0, N) * B + bbox_ind_batch).long()
+        bbox_offset_sliced = bbox_offset_fcn[slice_inds]
         loss += (
-            F.mse_loss(bbox_ind_batch, bbox_offset)
+            F.mse_loss(bbox_offset_sliced, bbox_offset)
             * self.cfg.TRAIN.BBOX_OFFSET_LOSS_WEIGHT
         )
         if self.cfg.TRAIN.USE_GT_LAYOUT:
@@ -115,6 +126,7 @@ class ClevrModel(pl.LightningModule):
         if self.cfg.MODEL.BUILD_LOC and bbox_ind is not None:
             loss += self.loc_loss(
                 outputs["loc_scores"],
+                outputs["bbox_offset_fcn"],
                 bbox_ind,
                 outputs["bbox_offset"],
                 outputs["module_logits"],
@@ -161,6 +173,7 @@ class ClevrModel(pl.LightningModule):
         if self.cfg.MODEL.BUILD_LOC:
             loss += self.loc_loss(
                 outputs["loc_scores"],
+                outputs["bbox_offset_fcn"],
                 bbox_ind,
                 outputs["bbox_offset"],
                 outputs["module_logits"],

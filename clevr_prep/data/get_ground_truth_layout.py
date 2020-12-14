@@ -54,6 +54,8 @@ def _prune_program(program):
     rm_set = {"count", "query_color", "query_material", "query_shape", "query_size"}
 
     for f in program:
+        if "function" not in f and "type" in f:
+            f["function"] = f["type"]
         if f and f["function"] in prune_set:
             assert len(f["inputs"]) == 2
             input_f_0 = program[f["inputs"][0]]

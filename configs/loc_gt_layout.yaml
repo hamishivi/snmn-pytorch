@@ -1,3 +1,4 @@
+DATASET: loc
 MODEL:
   BUILD_LOC: True
   BUILD_VQA: False

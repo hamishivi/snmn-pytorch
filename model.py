@@ -100,6 +100,9 @@ class Model(pl.LightningModule):
             att_last = self.nmn.get_stack_value(att_stack, stack_ptr)
             # first a linear layer (LOC_SCORES_POS_AFFINE)
             loc_scores = self.output_loc_aff_w * att_last + self.output_loc_aff_b
+            loc_scores = loc_scores.view(
+                -1, self.cfg.MODEL.H_FEAT * self.cfg.MODEL.W_FEAT
+            )
             # one layer conv (BBOX_REG_AS_FCN)
             bbox_offset_fcn = channels_last_conv(kb_batch, self.loc_conv)
             N = bbox_offset_fcn.size(0)
@@ -108,8 +111,11 @@ class Model(pl.LightningModule):
             bbox_offset_fcn = bbox_offset_fcn.view(N, B, 4)
             # bbox_offset [N, 4] is only used for prediction
             bbox_offset_flat = bbox_offset_fcn.view(N * B, 4)
-            slice_inds = torch.range(0, N) * B + torch.argmax(loc_scores, dim=-1).long()
-            bbox_offset = torch.gather(bbox_offset_flat, slice_inds)
+            slice_inds = (
+                torch.arange(0, N, device=loc_scores.device) * B
+                + torch.argmax(loc_scores, dim=-1).long()
+            )
+            bbox_offset = bbox_offset_flat[slice_inds]
             outputs["loc_scores"] = loc_scores
             outputs["bbox_offset"] = bbox_offset
             outputs["bbox_offset_fcn"] = bbox_offset_fcn
