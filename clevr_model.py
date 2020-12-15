@@ -117,7 +117,7 @@ class ClevrModel(pl.LightningModule):
         bbox_gt = batch.get("bbox_batch", None)
         question_mask = sequence_mask(seq_length)
         outputs = self.online_model(question_inds, question_mask, image_feat)
-        loss = torch.tensor(0, device=self.device)
+        loss = torch.tensor(0.0, device=self.device, dtype=torch.float)
         # we support training on vqa only, loc only, or both, depending on these flags.
         if self.cfg.MODEL.BUILD_VQA and answer_idx is not None:
             loss += self.loss(
@@ -144,7 +144,9 @@ class ClevrModel(pl.LightningModule):
                 img_w,
             )
             accuracy = torch.mean(
-                batch_bbox_iou(bbox_pred, bbox_gt) >= self.cfg.TRAIN.BBOX_IOU_THRESH
+                (
+                    batch_bbox_iou(bbox_pred, bbox_gt) >= self.cfg.TRAIN.BBOX_IOU_THRESH
+                ).float()
             )
             self.log("train/loc_acc", accuracy, on_epoch=True)
         self.log("train/loss", loss, on_epoch=True)
@@ -162,9 +164,9 @@ class ClevrModel(pl.LightningModule):
         gt_layout = batch.get("layout_inds", None)
         answer_idx = batch.get("answer_idx", None)
         bbox_ind = batch.get("bbox_ind", None)
-        bbox_gt = batch.get("bbox_gt", None)
+        bbox_gt = batch.get("bbox_batch", None)
         outputs = self._test_step(batch)
-        loss = torch.tensor(0, device=self.device)
+        loss = torch.tensor(0.0, device=self.device, dtype=torch.float)
         # we support training on vqa only, loc only, or both, depending on these flags.
         if self.cfg.MODEL.BUILD_VQA:
             loss += self.loss(
@@ -191,7 +193,9 @@ class ClevrModel(pl.LightningModule):
                 img_w,
             )
             accuracy = torch.mean(
-                batch_bbox_iou(bbox_pred, bbox_gt) >= self.cfg.TRAIN.BBOX_IOU_THRESH
+                (
+                    batch_bbox_iou(bbox_pred, bbox_gt) >= self.cfg.TRAIN.BBOX_IOU_THRESH
+                ).float()
             )
             self.log("valid/loc_acc", accuracy, on_step=False, on_epoch=True)
         self.log("valid/loss", loss, on_step=False, on_epoch=True)

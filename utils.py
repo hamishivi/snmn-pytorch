@@ -104,8 +104,14 @@ def batch_bbox_iou(bbox_1, bbox_2):
     x2_2 = x1_2 + w_2 - 1
     y2_2 = y1_2 + h_2 - 1
     A_2 = w_2 * h_2
-    w_i = torch.maximum(torch.minimum(x2_1, x2_2) - torch.maximum(x1_1, x1_2) + 1, 0)
-    h_i = torch.maximum(torch.minimum(y2_1, y2_2) - torch.maximum(y1_1, y1_2) + 1, 0)
+    w_i = torch.maximum(
+        torch.minimum(x2_1, x2_2) - torch.maximum(x1_1, x1_2) + 1,
+        torch.zeros_like(x1_1, device=x1_1.device),
+    )
+    h_i = torch.maximum(
+        torch.minimum(y2_1, y2_2) - torch.maximum(y1_1, y1_2) + 1,
+        torch.zeros_like(y1_1, device=y1_1.device),
+    )
     A_i = w_i * h_i
     IoU = A_i / (A_1 + A_2 - A_i)
     return IoU
