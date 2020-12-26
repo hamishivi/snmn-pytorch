@@ -150,11 +150,9 @@ class ClevrModel(pl.LightningModule):
             )
             self.log("train/loc_acc", accuracy, on_epoch=True)
         self.log("train/loss", loss, on_epoch=True)
-        return loss
-
-    def training_step_end(self, training_step_outputs):
-        # accum
+        # technically this means the offline model is behind, but its fine.
         accumulate(self.offline_model, self.online_model)
+        return loss
 
     def _test_step(self, batch):
         question_inds = batch["question_inds"]
