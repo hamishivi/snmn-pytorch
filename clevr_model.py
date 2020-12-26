@@ -152,6 +152,10 @@ class ClevrModel(pl.LightningModule):
         self.log("train/loss", loss, on_epoch=True)
         return loss
 
+    def training_step_end(self, training_step_outputs):
+        # accum
+        accumulate(self.offline_model, self.online_model)
+
     def _test_step(self, batch):
         question_inds = batch["question_inds"]
         seq_length = batch["seq_length"]
