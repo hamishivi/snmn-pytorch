@@ -141,9 +141,7 @@ class ClevrModel(pl.LightningModule):
         loss = torch.tensor(0.0, device=self.device, dtype=torch.float)
         # we support training on vqa only, loc only, or both, depending on these flags.
         if self.cfg.MODEL.BUILD_VQA:
-            loss += self.loss(
-                outputs["logits"], answer_idx, outputs["module_logits"], gt_layout
-            )
+            loss += self.loss(outputs["logits"], answer_idx)
             self.valid_acc(outputs["logits"], answer_idx)
             self.log("valid/vqa_acc", self.valid_acc, on_step=False, on_epoch=True)
         if self.cfg.MODEL.BUILD_LOC:
@@ -152,8 +150,6 @@ class ClevrModel(pl.LightningModule):
                 outputs["bbox_offset_fcn"],
                 bbox_ind,
                 outputs["bbox_offset"],
-                outputs["module_logits"],
-                gt_layout,
             )
             img_h, img_w, stride_h, stride_w = self.img_sizes
             bbox_pred = batch_feat_grid2bbox(
@@ -170,6 +166,10 @@ class ClevrModel(pl.LightningModule):
                 ).float()
             )
             self.log("valid/loc_acc", accuracy, on_step=False, on_epoch=True)
+        if self.cfg.TRAIN.USE_SHARPEN_LOSS:
+            loss += self.sharpen_loss(outputs["module_logits"])
+        if self.cfg.TRAIN.USE_GT_LAYOUT:
+            loss += self.gt_loss(outputs["module_logits"], gt_layout)
         self.log("valid/loss", loss, on_step=False, on_epoch=True)
 
     def validation_epoch_end(self, validation_step_outputs):
