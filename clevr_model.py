@@ -54,11 +54,11 @@ class ClevrModel(pl.LightningModule):
         )
         N = bbox_offset_fcn.size(0)
         B = bbox_offset_fcn.size(1)
-        bbox_offset_fcn = bbox_offset_fcn.view(-1, 4)
+        bbox_offset_flat = bbox_offset_fcn.view(N * B, 4)
         slice_inds = (
             torch.arange(0, N, device=self.device) * B + bbox_ind_batch
         ).long()
-        bbox_offset_sliced = bbox_offset_fcn[slice_inds]
+        bbox_offset_sliced = bbox_offset_flat[slice_inds]
         loss += (
             F.mse_loss(bbox_offset_sliced, bbox_offset)
             * self.cfg.TRAIN.BBOX_OFFSET_LOSS_WEIGHT
@@ -85,6 +85,7 @@ class ClevrModel(pl.LightningModule):
         gt_layout = batch.get("layout_inds", None)
         bbox_ind = batch.get("bbox_ind", None)
         bbox_gt = batch.get("bbox_batch", None)
+        bbox_offset = batch.get("bbox_offset", None)
         question_mask = sequence_mask(seq_length)
         outputs = self.online_model(question_inds, question_mask, image_feat)
         loss = torch.tensor(0.0, device=self.device, dtype=torch.float)
@@ -95,10 +96,7 @@ class ClevrModel(pl.LightningModule):
             self.log("train/vqa_acc", self.train_acc, on_epoch=True)
         if self.cfg.MODEL.BUILD_LOC and bbox_ind is not None:
             loss += self.loc_loss(
-                outputs["loc_scores"],
-                outputs["bbox_offset_fcn"],
-                bbox_ind,
-                outputs["bbox_offset"],
+                outputs["loc_scores"], outputs["bbox_offset_fcn"], bbox_ind, bbox_offset
             )
             img_h, img_w, stride_h, stride_w = self.img_sizes
             bbox_pred = batch_feat_grid2bbox(
@@ -137,6 +135,7 @@ class ClevrModel(pl.LightningModule):
         answer_idx = batch.get("answer_idx", None)
         bbox_ind = batch.get("bbox_ind", None)
         bbox_gt = batch.get("bbox_batch", None)
+        bbox_offset = batch.get("bbox_offset", None)
         outputs = self._test_step(batch)
         loss = torch.tensor(0.0, device=self.device, dtype=torch.float)
         # we support training on vqa only, loc only, or both, depending on these flags.
@@ -146,10 +145,7 @@ class ClevrModel(pl.LightningModule):
             self.log("valid/vqa_acc", self.valid_acc, on_step=False, on_epoch=True)
         if self.cfg.MODEL.BUILD_LOC:
             loss += self.loc_loss(
-                outputs["loc_scores"],
-                outputs["bbox_offset_fcn"],
-                bbox_ind,
-                outputs["bbox_offset"],
+                outputs["loc_scores"], outputs["bbox_offset_fcn"], bbox_ind, bbox_offset
             )
             img_h, img_w, stride_h, stride_w = self.img_sizes
             bbox_pred = batch_feat_grid2bbox(
