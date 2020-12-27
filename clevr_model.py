@@ -38,24 +38,16 @@ class ClevrModel(pl.LightningModule):
         return self.online_model(question, question_mask, image_feats)
 
     def sharpen_loss(self, module_probs):
+        sharpen_scale = (
+            self.sharpen_loss_scaler(self.global_step) * self.cfg.TRAIN.VQA_LOSS_WEIGHT
+        )
         flat_probs = module_probs.view(-1, self.num_module)
         # the entropy of the module weights
         entropy = -((torch.log(torch.clamp(flat_probs, min=1e-5)) * flat_probs).sum(-1))
         sharpen_loss = torch.mean(entropy)
-        return sharpen_loss
+        return sharpen_loss * sharpen_scale * self.cfg.TRAIN.SHARPEN_LOSS_WEIGHT
 
-    def loc_loss(
-        self,
-        loc_scores,
-        bbox_offset_fcn,
-        bbox_ind_batch,
-        bbox_offset,
-        module_logits,
-        gt_layout,
-    ):
-        sharpen_scale = (
-            self.sharpen_loss_scaler(self.global_step) * self.cfg.TRAIN.VQA_LOSS_WEIGHT
-        )
+    def loc_loss(self, loc_scores, bbox_offset_fcn, bbox_ind_batch, bbox_offset):
         loss = (
             F.cross_entropy(loc_scores, bbox_ind_batch)
             * self.cfg.TRAIN.BBOX_IND_LOSS_WEIGHT
@@ -71,40 +63,18 @@ class ClevrModel(pl.LightningModule):
             F.mse_loss(bbox_offset_sliced, bbox_offset)
             * self.cfg.TRAIN.BBOX_OFFSET_LOSS_WEIGHT
         )
-        if self.cfg.TRAIN.USE_GT_LAYOUT:
-            loss += (
-                F.cross_entropy(
-                    module_logits.view(-1, module_logits.size(2)), gt_layout.view(-1)
-                )
-                * self.cfg.TRAIN.LAYOUT_LOSS_WEIGHT
-            )
-        if self.cfg.TRAIN.USE_SHARPEN_LOSS:
-            loss += (
-                self.sharpen_loss(module_logits)
-                * sharpen_scale
-                * self.cfg.TRAIN.SHARPEN_LOSS_WEIGHT
-            )
         return loss
 
-    def loss(self, answer_logits, answer_idx, module_logits, gt_layout):
-        sharpen_scale = (
-            self.sharpen_loss_scaler(self.global_step) * self.cfg.TRAIN.VQA_LOSS_WEIGHT
+    def vqa_loss(self, answer_logits, answer_idx):
+        return F.cross_entropy(answer_logits, answer_idx)
+
+    def gt_loss(self, module_logits, gt_layout):
+        return (
+            F.cross_entropy(
+                module_logits.view(-1, module_logits.size(2)), gt_layout.view(-1)
+            )
+            * self.cfg.TRAIN.LAYOUT_LOSS_WEIGHT
         )
-        loss = F.cross_entropy(answer_logits, answer_idx)
-        if self.cfg.TRAIN.USE_SHARPEN_LOSS:
-            loss += (
-                self.sharpen_loss(module_logits)
-                * sharpen_scale
-                * self.cfg.TRAIN.SHARPEN_LOSS_WEIGHT
-            )
-        if self.cfg.TRAIN.USE_GT_LAYOUT:
-            loss += (
-                F.cross_entropy(
-                    module_logits.view(-1, module_logits.size(2)), gt_layout.view(-1)
-                )
-                * self.cfg.TRAIN.LAYOUT_LOSS_WEIGHT
-            )
-        return loss
 
     ## below is the pytorch lightning training code
     def training_step(self, batch, batch_idx):
@@ -120,9 +90,7 @@ class ClevrModel(pl.LightningModule):
         loss = torch.tensor(0.0, device=self.device, dtype=torch.float)
         # we support training on vqa only, loc only, or both, depending on these flags.
         if self.cfg.MODEL.BUILD_VQA and answer_idx is not None:
-            loss += self.loss(
-                outputs["logits"], answer_idx, outputs["module_logits"], gt_layout
-            )
+            loss += self.vqa_loss(outputs["logits"], answer_idx)
             self.train_acc(outputs["logits"], answer_idx)
             self.log("train/vqa_acc", self.train_acc, on_epoch=True)
         if self.cfg.MODEL.BUILD_LOC and bbox_ind is not None:
@@ -131,8 +99,6 @@ class ClevrModel(pl.LightningModule):
                 outputs["bbox_offset_fcn"],
                 bbox_ind,
                 outputs["bbox_offset"],
-                outputs["module_logits"],
-                gt_layout,
             )
             img_h, img_w, stride_h, stride_w = self.img_sizes
             bbox_pred = batch_feat_grid2bbox(
@@ -149,6 +115,10 @@ class ClevrModel(pl.LightningModule):
                 ).float()
             )
             self.log("train/loc_acc", accuracy, on_epoch=True)
+        if self.cfg.TRAIN.USE_SHARPEN_LOSS:
+            loss += self.sharpen_loss(outputs["module_logits"])
+        if self.cfg.TRAIN.USE_GT_LAYOUT:
+            loss += self.gt_loss(outputs["module_logits"], gt_layout)
         self.log("train/loss", loss, on_epoch=True)
         # technically this means the offline model is behind, but its fine.
         accumulate(self.offline_model, self.online_model)
