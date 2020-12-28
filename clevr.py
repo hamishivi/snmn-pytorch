@@ -168,8 +168,8 @@ def bbox2feat_grid(bbox, stride_H, stride_W, feat_H, feat_W):
     y1 = y1 * 1.0 / stride_H - 0.5
     x2 = x2 * 1.0 / stride_W - 0.5
     y2 = y2 * 1.0 / stride_H - 0.5
-    xc = min(max(int(round((x1 + x2) / 2.0)), 0), feat_W - 1)
-    yc = min(max(int(round((y1 + y2) / 2.0)), 0), feat_H - 1)
+    xc = np.minimum(np.maximum(np.int32(np.round((x1 + x2) / 2.0)), 0), feat_W - 1)
+    yc = np.minimum(np.maximum(np.int32(np.round((y1 + y2) / 2.0)), 0), feat_H - 1)
     ind = yc * feat_W + xc
     offset = x1 - xc, y1 - yc, x2 - xc, y2 - yc
     return ind, offset
