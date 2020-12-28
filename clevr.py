@@ -107,7 +107,14 @@ class PreprocessedClevr(Dataset):
         return self.vocab_dict.num_vocab
 
     def get_img_sizes(self):
-        return self.img_H, self.img_W, self.stride_H, self.stride_W
+        return (
+            self.feat_H,
+            self.feat_W,
+            self.img_H,
+            self.img_W,
+            self.stride_H,
+            self.stride_W,
+        )
 
 
 # pytorch doesnt pad in collate, so we use a custom collate fn
@@ -190,8 +197,8 @@ class ClevrDataModule(pl.LightningDataModule):
             True,
             self.cfg.VOCAB_ANSWER_FILE,
             self.cfg.VOCAB_LAYOUT_FILE,
-            self.cfg.MODEL.H_FEAT,
-            self.cfg.MODEL.W_FEAT,
+            self.cfg.MODEL.H_IMG,
+            self.cfg.MODEL.W_IMG,
         )
 
     def _construct_joint_(self, filename_vqa, filename_loc):
@@ -203,8 +210,8 @@ class ClevrDataModule(pl.LightningDataModule):
             True,
             self.cfg.VOCAB_ANSWER_FILE,
             self.cfg.VOCAB_LAYOUT_FILE,
-            self.cfg.MODEL.H_FEAT,
-            self.cfg.MODEL.W_FEAT,
+            self.cfg.MODEL.H_IMG,
+            self.cfg.MODEL.W_IMG,
         )
         loc = PreprocessedClevr(
             filename_loc,
@@ -214,8 +221,8 @@ class ClevrDataModule(pl.LightningDataModule):
             True,
             self.cfg.VOCAB_ANSWER_FILE,
             self.cfg.VOCAB_LAYOUT_FILE,
-            self.cfg.MODEL.H_FEAT,
-            self.cfg.MODEL.W_FEAT,
+            self.cfg.MODEL.H_IMG,
+            self.cfg.MODEL.W_IMG,
         )
         return ConcatDataset(clevr, loc)
 

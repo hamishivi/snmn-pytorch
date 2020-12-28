@@ -23,8 +23,8 @@ class ClevrModel(pl.LightningModule):
         self.steps = cfg.MODEL.T_CTRL
         self.num_module = len(module_names)
         # models (ema and reg)
-        self.online_model = Model(cfg, num_choices, module_names, num_vocab, img_sizes)
-        self.offline_model = Model(cfg, num_choices, module_names, num_vocab, img_sizes)
+        self.online_model = Model(cfg, num_choices, module_names, num_vocab)
+        self.offline_model = Model(cfg, num_choices, module_names, num_vocab)
         accumulate(self.offline_model, self.online_model, 0)
         # metrics
         self.train_acc = pl.metrics.Accuracy()
@@ -98,14 +98,14 @@ class ClevrModel(pl.LightningModule):
             loss += self.loc_loss(
                 outputs["loc_scores"], outputs["bbox_offset_fcn"], bbox_ind, bbox_offset
             )
-            img_h, img_w, stride_h, stride_w = self.img_sizes
+            feat_h, feat_w, _, _, stride_h, stride_w = self.img_sizes
             bbox_pred = batch_feat_grid2bbox(
                 torch.argmax(outputs["loc_scores"], 1),
                 outputs["bbox_offset"],
                 stride_h,
                 stride_w,
-                img_h,
-                img_w,
+                feat_h,
+                feat_w,
             )
             accuracy = torch.mean(
                 (

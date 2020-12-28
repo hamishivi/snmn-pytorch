@@ -14,12 +14,11 @@ class Model(pl.LightningModule):
     Neural Module network, implemented as a lightning module for ease of use.
     """
 
-    def __init__(self, cfg, num_choices, module_names, num_vocab, img_sizes):
+    def __init__(self, cfg, num_choices, module_names, num_vocab):
         super().__init__()
         self.cfg = cfg
         self.num_choices = num_choices
         self.module_names = module_names
-        self.img_sizes = img_sizes
         self.steps = cfg.MODEL.T_CTRL
         self.q_embed = nn.Embedding(num_vocab, cfg.MODEL.EMBED_DIM)
         self.q_enc = nn.LSTM(
