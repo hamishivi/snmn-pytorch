@@ -95,11 +95,14 @@ class Model(pl.LightningModule):
         outputs = {}
         # output - two layer FC
         output_logits = self.output_unit(torch.cat([q_vec, mem], 1))
+        outputs["logits"] = output_logits
         # output for clevr-ref
         if self.cfg.MODEL.BUILD_LOC:
             att_last = self.nmn.get_stack_value(att_stack, stack_ptr)
             # first a linear layer (LOC_SCORES_POS_AFFINE)
-            loc_scores = self.output_loc_aff_w * att_last + self.output_loc_aff_b
+            loc_scores = (
+                torch.abs(self.output_loc_aff_w) * att_last + self.output_loc_aff_b
+            )
             loc_scores = loc_scores.view(
                 -1, self.cfg.MODEL.H_FEAT * self.cfg.MODEL.W_FEAT
             )
@@ -119,6 +122,6 @@ class Model(pl.LightningModule):
             outputs["loc_scores"] = loc_scores
             outputs["bbox_offset"] = bbox_offset
             outputs["bbox_offset_fcn"] = bbox_offset_fcn
-        outputs["logits"] = output_logits
+
         outputs["module_logits"] = torch.stack(module_logits)
         return outputs
