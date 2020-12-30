@@ -147,14 +147,14 @@ class ClevrModel(pl.LightningModule):
             loss += self.loc_loss(
                 outputs["loc_scores"], outputs["bbox_offset_fcn"], bbox_ind, bbox_offset
             )
-            img_h, img_w, stride_h, stride_w = self.img_sizes
+            feat_h, feat_w, _, _, stride_h, stride_w = self.img_sizes
             bbox_pred = batch_feat_grid2bbox(
                 torch.argmax(outputs["loc_scores"], 1),
                 outputs["bbox_offset"],
                 stride_h,
                 stride_w,
-                img_h,
-                img_w,
+                feat_h,
+                feat_w,
             )
             accuracy = torch.mean(
                 (
