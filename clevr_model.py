@@ -60,7 +60,7 @@ class ClevrModel(pl.LightningModule):
         ).long()
         bbox_offset_sliced = bbox_offset_flat[slice_inds]
         loss += (
-            F.mse_loss(bbox_offset_sliced, bbox_offset)
+            F.mse_loss(bbox_offset_sliced.float(), bbox_offset.float())
             * self.cfg.TRAIN.BBOX_OFFSET_LOSS_WEIGHT
         )
         return loss
