@@ -84,10 +84,10 @@ class Model(pl.LightningModule):
         module_logits = []
         for i in range(self.steps):
             # Controller and NMN
-            control, module_probs = self.controller(
+            control, module_logit, module_probs = self.controller(
                 question, lstm_seq, q_vec, control, question_mask, i
             )
-            module_logits.append(module_probs)
+            module_logits.append(module_logit)
             att_stack, stack_ptr, mem = self.nmn(
                 control, kb_batch, module_probs, mem, att_stack, stack_ptr
             )
@@ -122,5 +122,5 @@ class Model(pl.LightningModule):
             outputs["bbox_offset"] = bbox_offset
             outputs["bbox_offset_fcn"] = bbox_offset_fcn
 
-        outputs["module_logits"] = torch.stack(module_logits)
+        outputs["module_logits"] = torch.stack(module_logits, 1)
         return outputs

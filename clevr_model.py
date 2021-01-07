@@ -71,7 +71,7 @@ class ClevrModel(pl.LightningModule):
     def gt_loss(self, module_logits, gt_layout):
         return (
             F.cross_entropy(
-                module_logits.view(-1, module_logits.size(2)), gt_layout.view(-1)
+                module_logits.reshape(-1, module_logits.size(2)), gt_layout.reshape(-1)
             )
             * self.cfg.TRAIN.LAYOUT_LOSS_WEIGHT
         )

@@ -132,8 +132,8 @@ def clevr_collate(batch, max_ops, noop_idx):
     if "layout_inds" in batch_dict:
         layout_inds = torch.ones(max_ops, len(batch)) * noop_idx
         for i, b in enumerate(batch):
-            layout_inds[: b["layout_inds"].size(0), i] = b["layout_inds"]
-        batch_dict["layout_inds"] = layout_inds.long()
+            layout_inds[:b["layout_inds"].size(0), i] = b["layout_inds"]
+        batch_dict["layout_inds"] = layout_inds.long().transpose(0, 1)
     for k in [
         "seq_length",
         "image_feat",
@@ -260,18 +260,18 @@ class ClevrDataModule(pl.LightningDataModule):
     # we define a separate DataLoader for each of train/val/test
     def train_dataloader(self):
         clevr_train = DataLoader(
-            self.clevr_train, batch_size=self.batch_size, collate_fn=self.collate
+            self.clevr_train, batch_size=self.batch_size, num_workers=8, pin_memory=True, collate_fn=self.collate
         )
         return clevr_train
 
     def val_dataloader(self):
         clevr_val = DataLoader(
-            self.clevr_val, batch_size=10 * self.batch_size, collate_fn=self.collate
+            self.clevr_val, num_workers=8, pin_memory=True, batch_size=10 * self.batch_size, collate_fn=self.collate
         )
         return clevr_val
 
     def test_dataloader(self):
         clevr_test = DataLoader(
-            self.clevr_test, batch_size=10 * self.batch_size, collate_fn=self.collate
+            self.clevr_test, num_workers=8, pin_memory=True, batch_size=10 * self.batch_size, collate_fn=self.collate
         )
         return clevr_test

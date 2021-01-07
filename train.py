@@ -55,6 +55,7 @@ if cfg.LOAD:
         num_choices=num_choices,
         module_names=module_names,
         num_vocab=vocab_size,
+        img_sizes=img_sizes,
     )
 else:
     model = ClevrModel(cfg, num_choices, module_names, vocab_size, img_sizes)
