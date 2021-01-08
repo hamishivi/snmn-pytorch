@@ -15,6 +15,7 @@ cfg = __C
 __C.EXP_NAME = "<fill-with-filename>"
 __C.GPU_ID = 0
 __C.GPU_MEM_GROWTH = True
+__C.DATASET = "vqa"  # should be vqa, loc, or joint
 
 __C.VOCAB_QUESTION_FILE = "./clevr_prep/data/vocabulary_clevr.txt"
 __C.VOCAB_LAYOUT_FILE = "./clevr_prep/data/vocabulary_layout.txt"
@@ -22,6 +23,10 @@ __C.VOCAB_ANSWER_FILE = "./clevr_prep/data/answers_clevr.txt"
 __C.TRAIN_IMDB_FILE = "./clevr_prep/data/imdb/imdb_train.npy"
 __C.VAL_IMDB_FILE = "./clevr_prep/data/imdb/imdb_val.npy"
 __C.TEST_IMDB_FILE = "./clevr_prep/data/imdb/imdb_test.npy"
+__C.TRAIN_LOC_IMDB_FILE = "./clevr_prep/data/imdb/imdb_loc_train.npy"
+__C.VAL_LOC_IMDB_FILE = "./clevr_prep/data/imdb/imdb_loc_val.npy"
+__C.TEST_LOC_IMDB_FILE = "./clevr_prep/data/imdb/imdb_loc_test.npy"
+
 
 __C.USE_FIXED_WORD_EMBED = False
 __C.FIXED_WORD_EMBED_FILE = ""

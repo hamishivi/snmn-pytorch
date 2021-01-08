@@ -45,6 +45,7 @@ clevr.setup()
 num_choices = clevr.clevr_module.get_answer_choices()
 module_names = clevr.clevr_module.get_module_names()
 vocab_size = clevr.clevr_module.get_vocab_size()
+img_sizes = clevr.clevr_module.get_img_sizes()
 
 
 if cfg.LOAD:
@@ -54,9 +55,10 @@ if cfg.LOAD:
         num_choices=num_choices,
         module_names=module_names,
         num_vocab=vocab_size,
+        img_sizes=img_sizes,
     )
 else:
-    model = ClevrModel(cfg, num_choices, module_names, vocab_size)
+    model = ClevrModel(cfg, num_choices, module_names, vocab_size, img_sizes)
 
 wandb_logger = WandbLogger(project=cfg.WANDB_PROJECT_NAME, log_model=True)
 
@@ -71,5 +73,3 @@ trainer = pl.Trainer(
 )
 
 trainer.fit(model, clevr)
-
-trainer.test(datamodule=clevr, ckpt_path=None)

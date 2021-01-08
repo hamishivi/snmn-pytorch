@@ -82,6 +82,41 @@ def sequence_mask(lengths, maxlen=None, dtype=torch.long):
     return mask.type(dtype)
 
 
+def batch_feat_grid2bbox(ind, offset, stride_H, stride_W, feat_H, feat_W):
+    xc = ind % feat_W
+    yc = ind // feat_W
+    x1 = (xc + offset[:, 0] + 0.5) * stride_W
+    y1 = (yc + offset[:, 1] + 0.5) * stride_H
+    x2 = (xc + offset[:, 2] + 0.5) * stride_W
+    y2 = (yc + offset[:, 3] + 0.5) * stride_H
+    w = x2 - x1 + 1
+    h = y2 - y1 + 1
+    bbox = torch.stack((x1, y1, w, h), dim=1)
+    return bbox
+
+
+def batch_bbox_iou(bbox_1, bbox_2):
+    x1_1, y1_1, w_1, h_1 = bbox_1.T
+    x2_1 = x1_1 + w_1 - 1
+    y2_1 = y1_1 + h_1 - 1
+    A_1 = w_1 * h_1
+    x1_2, y1_2, w_2, h_2 = bbox_2.T
+    x2_2 = x1_2 + w_2 - 1
+    y2_2 = y1_2 + h_2 - 1
+    A_2 = w_2 * h_2
+    w_i = torch.maximum(
+        torch.minimum(x2_1, x2_2) - torch.maximum(x1_1, x1_2) + 1,
+        torch.zeros_like(x1_1, device=x1_1.device),
+    )
+    h_i = torch.maximum(
+        torch.minimum(y2_1, y2_2) - torch.maximum(y1_1, y1_2) + 1,
+        torch.zeros_like(y1_1, device=y1_1.device),
+    )
+    A_i = w_i * h_i
+    IoU = A_i / (A_1 + A_2 - A_i)
+    return IoU
+
+
 # pytorch doesnt have a channels last conv option, as far as I can see.
 # so this is a little wrapper func (since im lazy and dont want to rewrite
 # all my code to be channels-first).

@@ -2,6 +2,7 @@ import numpy as np
 import json
 import os
 import re
+import argparse
 
 import sys
 from tqdm import tqdm
@@ -34,7 +35,7 @@ def build_imdb(image_set):
         feature_path = os.path.join(abs_feature_dir, image_name + ".npy")
         question_str = q["question"]
         question_tokens = tokenize(question_str)
-        answer = q["answer"] if "answer" in q else None
+        bbox = q["bbox"] if "bbox" in q else None
         gt_layout_tokens = q["gt_layout"] if "gt_layout" in q else None
 
         iminfo = dict(
@@ -43,18 +44,34 @@ def build_imdb(image_set):
             feature_path=feature_path,
             question_str=question_str,
             question_tokens=question_tokens,
-            answer=answer,
+            bbox=bbox,
             gt_layout_tokens=gt_layout_tokens,
         )
         imdb[n_q] = iminfo
     return imdb
 
 
-imdb_trn = build_imdb("train")
-imdb_val = build_imdb("val")
-imdb_tst = build_imdb("test")
+parser = argparse.ArgumentParser(
+    description="Extract construct module ground truth layouts for clevr or clevr-ref."
+)
+parser.add_argument(
+    "--loc",
+    action="store_true",
+    help="if used, extract features from clevr-ref dataset rather than regular clevr.",
+)
+args = parser.parse_args()
+
+train, val, test = "train", "val", "test"
+if args.loc:
+    train = "loc_" + train
+    val = "loc_" + val
+    test = "loc_" + test
+
+imdb_trn = build_imdb(train)
+imdb_val = build_imdb(val)
+imdb_tst = build_imdb(test)
 
 os.makedirs("./imdb", exist_ok=True)
-np.save("./imdb/imdb_train.npy", np.array(imdb_trn))
-np.save("./imdb/imdb_val.npy", np.array(imdb_val))
-np.save("./imdb/imdb_test.npy", np.array(imdb_tst))
+np.save(f"./imdb/imdb_{train}.npy", np.array(imdb_trn))
+np.save(f"./imdb/imdb_{val}.npy", np.array(imdb_val))
+np.save(f"./imdb/imdb_{test}.npy", np.array(imdb_tst))

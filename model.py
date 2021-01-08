@@ -1,9 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import Sequential
-import torch.nn.functional as F
 import pytorch_lightning as pl
-from torch.nn.modules import module
 import numpy as np
 
 from controller import Controller
@@ -38,6 +36,7 @@ class Model(pl.LightningModule):
             nn.Conv2d(cfg.MODEL.KB_DIM, cfg.MODEL.KB_DIM, 1, 1),
         )
         self.nmn = NMN(cfg, self.module_names)
+        # basic vqa output for clevr
         self.output_unit = Sequential(
             nn.Linear(
                 cfg.MODEL.NMN.MEM_DIM + cfg.MODEL.LSTM_DIM, cfg.MODEL.VQA_OUTPUT_DIM
@@ -45,6 +44,18 @@ class Model(pl.LightningModule):
             nn.ELU(),
             nn.Linear(cfg.MODEL.VQA_OUTPUT_DIM, self.num_choices),
         )
+        # output for clevr-ref
+        self.output_loc_aff_w = nn.Parameter(
+            torch.nn.init.xavier_uniform_(
+                torch.ones(cfg.MODEL.H_FEAT, cfg.MODEL.W_FEAT, 1)
+            )
+        )
+        self.output_loc_aff_b = nn.Parameter(
+            torch.nn.init.xavier_uniform_(
+                torch.ones(cfg.MODEL.H_FEAT, cfg.MODEL.W_FEAT, 1)
+            )
+        )
+        self.loc_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 4, 1, 1)
 
         control_dim = cfg.MODEL.KB_DIM
         if cfg.MODEL.CTRL.USE_WORD_EMBED:
@@ -73,13 +84,43 @@ class Model(pl.LightningModule):
         module_logits = []
         for i in range(self.steps):
             # Controller and NMN
-            control, module_probs = self.controller(
+            control, module_logit, module_probs = self.controller(
                 question, lstm_seq, q_vec, control, question_mask, i
             )
-            module_logits.append(module_probs)
+            module_logits.append(module_logit)
             att_stack, stack_ptr, mem = self.nmn(
                 control, kb_batch, module_probs, mem, att_stack, stack_ptr
             )
+        outputs = {}
         # output - two layer FC
         output_logits = self.output_unit(torch.cat([q_vec, mem], 1))
-        return output_logits, torch.stack(module_logits)
+        outputs["logits"] = output_logits
+        # output for clevr-ref
+        if self.cfg.MODEL.BUILD_LOC:
+            att_last = self.nmn.get_stack_value(att_stack, stack_ptr)
+            # first a linear layer (LOC_SCORES_POS_AFFINE)
+            loc_scores = (
+                torch.abs(self.output_loc_aff_w) * att_last + self.output_loc_aff_b
+            )
+            loc_scores = loc_scores.view(
+                -1, self.cfg.MODEL.H_FEAT * self.cfg.MODEL.W_FEAT
+            )
+            # one layer conv (BBOX_REG_AS_FCN)
+            bbox_offset_fcn = channels_last_conv(kb_batch, self.loc_conv)
+            N = bbox_offset_fcn.size(0)
+            B = self.cfg.MODEL.H_FEAT * self.cfg.MODEL.W_FEAT
+            # bbox_offset_fcn [N, B, 4] is used for training
+            bbox_offset_fcn = bbox_offset_fcn.view(N, B, 4)
+            # bbox_offset [N, 4] is only used for prediction
+            bbox_offset_flat = bbox_offset_fcn.view(N * B, 4)
+            slice_inds = (
+                torch.arange(0, N, device=loc_scores.device) * B
+                + torch.argmax(loc_scores, dim=-1).long()
+            )
+            bbox_offset = bbox_offset_flat[slice_inds]
+            outputs["loc_scores"] = loc_scores
+            outputs["bbox_offset"] = bbox_offset
+            outputs["bbox_offset_fcn"] = bbox_offset_fcn
+
+        outputs["module_logits"] = torch.stack(module_logits, 1)
+        return outputs
