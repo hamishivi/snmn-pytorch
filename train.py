@@ -6,6 +6,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from clevr import ClevrDataModule
 from clevr_model import ClevrModel
+from clevr_joint_model import ClevrJointModel
 from config import cfg
 
 
@@ -26,7 +27,7 @@ parser.add_argument(
     type=int,
     nargs="?",
     default=42,
-    help="seed to use for reproducibility. Do not change from default to reproduce results.",
+    help="seed to use for reproducibility.",
 )
 
 args = parser.parse_args()
@@ -47,9 +48,13 @@ module_names = clevr.clevr_module.get_module_names()
 vocab_size = clevr.clevr_module.get_vocab_size()
 img_sizes = clevr.clevr_module.get_img_sizes()
 
+if cfg.MODEL.BUILD_LOC and cfg.MODEL.BUILD_VQA:
+    model_to_load = ClevrJointModel
+else:
+    model_to_load = ClevrModel
 
 if cfg.LOAD:
-    model = ClevrModel.load_from_checkpoint(
+    model = model_to_load.load_from_checkpoint(
         cfg.CHECKPOINT_FILENAME,
         cfg=cfg,
         num_choices=num_choices,
@@ -58,7 +63,7 @@ if cfg.LOAD:
         img_sizes=img_sizes,
     )
 else:
-    model = ClevrModel(cfg, num_choices, module_names, vocab_size, img_sizes)
+    model = model_to_load(cfg, num_choices, module_names, vocab_size, img_sizes)
 
 wandb_logger = WandbLogger(project=cfg.WANDB_PROJECT_NAME, log_model=True)
 
