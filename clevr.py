@@ -152,12 +152,33 @@ class ConcatDataset(torch.utils.data.Dataset):
     def __init__(self, clevr_dataset, clevr_ref_dataset):
         self.clevr = clevr_dataset
         self.clevr_ref = clevr_ref_dataset
+        self.layout_dict = clevr_dataset.layout_dict
 
     def __getitem__(self, i):
         return {"vqa": self.clevr[i], "loc": self.clevr_ref[i]}
 
     def __len__(self):
         return min(len(self.clevr), len(self.clevr_ref))
+
+    # wrapper for the attributes of the other two
+    def get_answer_choices(self):
+        return self.clevr.answer_dict.num_vocab
+
+    def get_module_names(self):
+        return self.clevr.layout_dict.word_list
+
+    def get_vocab_size(self):
+        return self.clevr.vocab_dict.num_vocab
+
+    def get_img_sizes(self):
+        return (
+            self.clevr_ref.feat_H,
+            self.clevr_ref.feat_W,
+            self.clevr_ref.img_H,
+            self.clevr_ref.img_W,
+            self.clevr_ref.stride_H,
+            self.clevr_ref.stride_W,
+        )
 
 
 def joint_collate(batch, max_ops, noop_idx):

@@ -168,16 +168,6 @@ class ClevrModel(pl.LightningModule):
             loss += self.gt_loss(outputs["module_logits"], gt_layout)
         self.log("valid/loss", loss, on_step=False, on_epoch=True)
 
-    def validation_epoch_end(self, validation_step_outputs):
-        if self.cfg.MODEL.BUILD_VQA:
-            flattened_logits = torch.flatten(torch.cat(validation_step_outputs))
-            self.logger.experiment.log(
-                {
-                    "valid/logits": wandb.Histogram(flattened_logits.to("cpu")),
-                    "global_step": self.global_step,
-                }
-            )
-
     def test_epoch_end(self, test_step_outputs):
         if self.cfg.MODEL.BUILD_VQA:
             flattened_preds = (
