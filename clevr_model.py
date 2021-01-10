@@ -39,7 +39,7 @@ class ClevrModel(pl.LightningModule):
 
     def sharpen_loss(self, module_probs):
         sharpen_scale = (
-            self.sharpen_loss_scaler(self.global_step) * self.cfg.TRAIN.VQA_LOSS_WEIGHT
+            self.sharpen_loss_scaler(self.global_step)
         )
         flat_probs = module_probs.view(-1, self.num_module)
         # the entropy of the module weights
@@ -66,7 +66,7 @@ class ClevrModel(pl.LightningModule):
         return loss
 
     def vqa_loss(self, answer_logits, answer_idx):
-        return F.cross_entropy(answer_logits, answer_idx)
+        return F.cross_entropy(answer_logits, answer_idx)  * self.cfg.TRAIN.VQA_LOSS_WEIGHT
 
     def gt_loss(self, module_logits, gt_layout):
         return (
@@ -77,7 +77,7 @@ class ClevrModel(pl.LightningModule):
         )
 
     ## below is the pytorch lightning training code
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch, batch_idx, use_sharpen=True):
         question_inds = batch["question_inds"]
         seq_length = batch["seq_length"]
         image_feat = batch["image_feat"]
@@ -93,7 +93,7 @@ class ClevrModel(pl.LightningModule):
         if self.cfg.MODEL.BUILD_VQA and answer_idx is not None:
             loss += self.vqa_loss(outputs["logits"], answer_idx)
             self.train_acc(outputs["logits"], answer_idx)
-            self.log("train/vqa_acc", self.train_acc, on_epoch=True)
+            self.log("train/vqa_acc", self.train_acc)
         if self.cfg.MODEL.BUILD_LOC and bbox_ind is not None:
             loss += self.loc_loss(
                 outputs["loc_scores"], outputs["bbox_offset_fcn"], bbox_ind, bbox_offset
@@ -112,12 +112,12 @@ class ClevrModel(pl.LightningModule):
                     batch_bbox_iou(bbox_pred, bbox_gt) >= self.cfg.TRAIN.BBOX_IOU_THRESH
                 ).float()
             )
-            self.log("train/loc_acc", accuracy, on_epoch=True)
-        if self.cfg.TRAIN.USE_SHARPEN_LOSS:
+            self.log("train/loc_acc", accuracy)
+        if self.cfg.TRAIN.USE_SHARPEN_LOSS and use_sharpen:
             loss += self.sharpen_loss(outputs["module_logits"])
         if self.cfg.TRAIN.USE_GT_LAYOUT:
             loss += self.gt_loss(outputs["module_logits"], gt_layout)
-        self.log("train/loss", loss, on_epoch=True)
+        self.log("train/loss", loss)
         # technically this means the offline model is behind, but its fine.
         accumulate(self.offline_model, self.online_model)
         return loss
@@ -130,7 +130,7 @@ class ClevrModel(pl.LightningModule):
         outputs = self.offline_model(question_inds, question_mask, image_feat)
         return outputs
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx, use_sharpen=True):
         gt_layout = batch.get("layout_inds", None)
         answer_idx = batch.get("answer_idx", None)
         bbox_ind = batch.get("bbox_ind", None)
@@ -139,11 +139,11 @@ class ClevrModel(pl.LightningModule):
         outputs = self._test_step(batch)
         loss = torch.tensor(0.0, device=self.device, dtype=torch.float)
         # we support training on vqa only, loc only, or both, depending on these flags.
-        if self.cfg.MODEL.BUILD_VQA:
-            loss += self.loss(outputs["logits"], answer_idx)
+        if self.cfg.MODEL.BUILD_VQA and answer_idx is not None:
+            loss += self.vqa_loss(outputs["logits"], answer_idx)
             self.valid_acc(outputs["logits"], answer_idx)
             self.log("valid/vqa_acc", self.valid_acc, on_step=False, on_epoch=True)
-        if self.cfg.MODEL.BUILD_LOC:
+        if self.cfg.MODEL.BUILD_LOC and bbox_ind is not None:
             loss += self.loc_loss(
                 outputs["loc_scores"], outputs["bbox_offset_fcn"], bbox_ind, bbox_offset
             )
@@ -162,11 +162,12 @@ class ClevrModel(pl.LightningModule):
                 ).float()
             )
             self.log("valid/loc_acc", accuracy, on_step=False, on_epoch=True)
-        if self.cfg.TRAIN.USE_SHARPEN_LOSS:
+        if self.cfg.TRAIN.USE_SHARPEN_LOSS and use_sharpen:
             loss += self.sharpen_loss(outputs["module_logits"])
         if self.cfg.TRAIN.USE_GT_LAYOUT:
             loss += self.gt_loss(outputs["module_logits"], gt_layout)
         self.log("valid/loss", loss, on_step=False, on_epoch=True)
+        return loss
 
     def test_epoch_end(self, test_step_outputs):
         if self.cfg.MODEL.BUILD_VQA:
