@@ -19,14 +19,14 @@ class ClevrJointModel(ClevrModel):
 
     def training_step(self, batch, batch_idx):
         vqa_batch = batch["vqa"]
-        loss = super().training_step(vqa_batch, batch_idx)
+        loss = super().training_step(vqa_batch, batch_idx, use_sharpen=False)
         loc_batch = batch["loc"]
         loss += super().training_step(loc_batch, batch_idx)
         return loss
 
     def validation_step(self, batch, batch_idx):
         vqa_batch = batch["vqa"]
-        loss = super().training_step(vqa_batch, batch_idx)
+        loss = super().validation_step(vqa_batch, batch_idx)
         loc_batch = batch["loc"]
-        loss += super().training_step(loc_batch, batch_idx)
+        loss += super().validation_step(loc_batch, batch_idx)
         return loss
