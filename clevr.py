@@ -132,7 +132,7 @@ def clevr_collate(batch, max_ops, noop_idx):
     if "layout_inds" in batch_dict:
         layout_inds = torch.ones(max_ops, len(batch)) * noop_idx
         for i, b in enumerate(batch):
-            layout_inds[:b["layout_inds"].size(0), i] = b["layout_inds"]
+            layout_inds[: b["layout_inds"].size(0), i] = b["layout_inds"]
         batch_dict["layout_inds"] = layout_inds.long().transpose(0, 1)
     for k in [
         "seq_length",
@@ -251,48 +251,69 @@ class ClevrDataModule(pl.LightningDataModule):
         dataset = self.cfg.DATASET
         assert dataset in ["vqa", "loc", "joint"]
         if dataset == "vqa":
-            self.clevr_train = self._construct_clevr_(self.cfg.TRAIN_IMDB_FILE)
-            self.clevr_val = self._construct_clevr_(self.cfg.VAL_IMDB_FILE)
-            self.clevr_test = self._construct_clevr_(self.cfg.TEST_IMDB_FILE)
-            self.clevr_module = self.clevr_train
-            noop_idx = self.clevr_train.layout_dict.word2idx("_NoOp")
+            if stage == "test":
+                self.clevr_test = self._construct_clevr_(self.cfg.TEST_IMDB_FILE)
+                self.clevr_module = self.clevr_test
+            else:
+                self.clevr_train = self._construct_clevr_(self.cfg.TRAIN_IMDB_FILE)
+                self.clevr_val = self._construct_clevr_(self.cfg.VAL_IMDB_FILE)
+                self.clevr_module = self.clevr_train
+            noop_idx = self.clevr_module.layout_dict.word2idx("_NoOp")
             self.collate = lambda x: clevr_collate(x, self.cfg.MODEL.T_CTRL, noop_idx)
         elif dataset == "loc":
-            self.clevr_train = self._construct_clevr_(self.cfg.TRAIN_LOC_IMDB_FILE)
-            self.clevr_val = self._construct_clevr_(self.cfg.VAL_LOC_IMDB_FILE)
-            self.clevr_test = self._construct_clevr_(self.cfg.TEST_LOC_IMDB_FILE)
-            self.clevr_module = self.clevr_train
+            if stage == "test":
+                self.clevr_test = self._construct_clevr_(self.cfg.TEST_LOC_IMDB_FILE)
+                self.clevr_module = self.clevr_test
+            else:
+                self.clevr_train = self._construct_clevr_(self.cfg.TRAIN_LOC_IMDB_FILE)
+                self.clevr_val = self._construct_clevr_(self.cfg.VAL_LOC_IMDB_FILE)
+                self.clevr_module = self.clevr_train
             noop_idx = self.clevr_train.layout_dict.word2idx("_NoOp")
             self.collate = lambda x: clevr_collate(x, self.cfg.MODEL.T_CTRL, noop_idx)
         else:
-            self.clevr_train = self._construct_joint_(
-                self.cfg.TRAIN_IMDB_FILE, self.cfg.TRAIN_LOC_IMDB_FILE
-            )
-            self.clevr_val = self._construct_joint_(
-                self.cfg.VAL_IMDB_FILE, self.cfg.VAL_LOC_IMDB_FILE
-            )
-            self.clevr_test = self._construct_joint_(
-                self.cfg.TEST_IMDB_FILE, self.cfg.TEST_LOC_IMDB_FILE
-            )
-            self.clevr_module = self.clevr_train
+            if stage == "test":
+                self.clevr_test = self._construct_joint_(
+                    self.cfg.TEST_IMDB_FILE, self.cfg.TEST_LOC_IMDB_FILE
+                )
+                self.clevr_module = self.clevr_test
+            else:
+                self.clevr_train = self._construct_joint_(
+                    self.cfg.TRAIN_IMDB_FILE, self.cfg.TRAIN_LOC_IMDB_FILE
+                )
+                self.clevr_val = self._construct_joint_(
+                    self.cfg.VAL_IMDB_FILE, self.cfg.VAL_LOC_IMDB_FILE
+                )
+                self.clevr_module = self.clevr_train
             noop_idx = self.clevr_train.layout_dict.word2idx("_NoOp")
             self.collate = lambda x: joint_collate(x, self.cfg.MODEL.T_CTRL, noop_idx)
 
     # we define a separate DataLoader for each of train/val/test
     def train_dataloader(self):
         clevr_train = DataLoader(
-            self.clevr_train, batch_size=self.batch_size, num_workers=8, pin_memory=True, collate_fn=self.collate
+            self.clevr_train,
+            batch_size=self.batch_size,
+            num_workers=8,
+            pin_memory=True,
+            collate_fn=self.collate,
         )
         return clevr_train
 
     def val_dataloader(self):
         clevr_val = DataLoader(
-            self.clevr_val, num_workers=8, pin_memory=True, batch_size=10 * self.batch_size, collate_fn=self.collate
+            self.clevr_val,
+            num_workers=8,
+            pin_memory=True,
+            batch_size=10 * self.batch_size,
+            collate_fn=self.collate,
         )
         return clevr_val
 
     def test_dataloader(self):
         clevr_test = DataLoader(
-            self.clevr_test, num_workers=8, pin_memory=True, batch_size=10 * self.batch_size, collate_fn=self.collate
+            self.clevr_test,
+            num_workers=8,
+            pin_memory=True,
+            batch_size=10 * self.batch_size,
+            collate_fn=self.collate,
         )
         return clevr_test
