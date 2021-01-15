@@ -41,7 +41,7 @@ def tokenize(sentence):
     return tokens
 
 
-def predict_sample(cfg, question_text, image_file):
+def predict_sample(cfg, checkpoint_filename, question_text, image_file):
     answer_dict = VocabDict(cfg.VOCAB_ANSWER_FILE)
     layout_dict = VocabDict(cfg.VOCAB_LAYOUT_FILE)
     question_dict = VocabDict(cfg.VOCAB_QUESTION_FILE)
@@ -80,7 +80,7 @@ def predict_sample(cfg, question_text, image_file):
         else:
             model_to_load = ClevrModel
         model = model_to_load.load_from_checkpoint(
-            "/Users/hamishivison/Google Drive/personal projects/snmn-pytorch/loc-scratch/epoch=18-step=199999.ckpt",
+            checkpoint_filename,
             cfg=cfg,
             num_choices=num_choices,
             module_names=module_names,

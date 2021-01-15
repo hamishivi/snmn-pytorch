@@ -1,0 +1,58 @@
+<head>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.js"
+        integrity="sha256-DrT5NfxfbHvMHux31Lkhxg42LY6of8TaYyK50jnxRnM="
+        crossorigin="anonymous"></script>
+    </head>
+<h1> Stack Neural Module Network Demo!</h1>
+
+<p>This is a small barebones demo of the SNMN, from this paper. I'm using my own reproduction of the paper from this repository. To use, choose an image from the list, and then choose a question to use, or type your own in.</p>
+
+<form action="/model">
+<!-- image choices -->
+<label for="images">Choose an image:</label>
+
+<select name="image_id" id="images">
+    {% for i in range(1, 101) %}
+        <option value={{i-1}}>{{i}}</option>
+    {% endfor %}
+</select>
+<!-- question choices -->
+<input name="question_text" type="text" list="question" />
+<datalist id="question">
+    <option>Are there any gray metal things of the same size as the purple matte cylinder?</option>
+</datalist>
+<!-- cfg choice -->
+<select name="cfg_id" id="cfg">
+    <option selected value=1>Text answer</option>
+    <option value=2>Bounding box answer</option>
+</select>
+
+<!-- submit button -->
+<input type="submit">
+</form>
+
+<!-- display image -->
+<img src="/static/sample_images/CLEVR_test_000000.png" alt="CLEVR image">
+
+
+<!-- program generated -->
+
+<!-- any visualisation generated -->
+
+<!-- final answer -->
+<script>
+    var imageList = {{ image_filenames|tojson|safe }};
+    var question_texts = {{ question_texts|tojson|safe }};
+    $('#images').change(function () {
+        // display image
+        var val = parseInt($('#images').val());
+        $('img').attr("src", imageList[val]);
+        // change the questions in the dropdown
+        $("#question option").remove()
+        var questions = question_texts[val]
+        for (var i = 0; i < questions.length; i++) {
+            var question = questions[i]
+            $("#question").append('<option>' + question +'</option>')
+        }
+    });
+</script>
