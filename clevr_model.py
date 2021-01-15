@@ -37,7 +37,8 @@ class ClevrModel(pl.LightningModule):
     def forward(self, question, question_mask, image_feats):
         return self.online_model(question, question_mask, image_feats)
 
-    def sharpen_loss(self, module_probs):
+    def sharpen_loss(self, module_logits):
+        module_probs = F.softmax(module_logits, dim=-1)
         sharpen_scale = (
             self.sharpen_loss_scaler(self.global_step)
         )

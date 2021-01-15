@@ -50,6 +50,12 @@ class PreprocessedClevr(Dataset):
             self.img_W = img_w
             self.stride_H = self.img_H * 1.0 / self.feat_H
             self.stride_W = self.img_W * 1.0 / self.feat_W
+        else:
+            # not used, but give values to avoid reference errors.
+            self.img_H = 0
+            self.img_W = 0
+            self.stride_H = 0
+            self.stride_W = 0
 
     def __len__(self):
         return len(self.imdb)
@@ -281,18 +287,18 @@ class ClevrDataModule(pl.LightningDataModule):
     # we define a separate DataLoader for each of train/val/test
     def train_dataloader(self):
         clevr_train = DataLoader(
-            self.clevr_train, batch_size=self.batch_size, num_workers=8, pin_memory=True, collate_fn=self.collate
+            self.clevr_train, batch_size=self.batch_size, num_workers=4, pin_memory=True, collate_fn=self.collate
         )
         return clevr_train
 
     def val_dataloader(self):
         clevr_val = DataLoader(
-            self.clevr_val, num_workers=8, pin_memory=True, batch_size=10 * self.batch_size, collate_fn=self.collate
+            self.clevr_val, num_workers=4, pin_memory=True, batch_size=10 * self.batch_size, collate_fn=self.collate
         )
         return clevr_val
 
     def test_dataloader(self):
         clevr_test = DataLoader(
-            self.clevr_test, num_workers=8, pin_memory=True, batch_size=10 * self.batch_size, collate_fn=self.collate
+            self.clevr_test, num_workers=4, pin_memory=True, batch_size=10 * self.batch_size, collate_fn=self.collate
         )
         return clevr_test
