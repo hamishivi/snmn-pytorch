@@ -33,15 +33,13 @@ class ClevrModel(pl.LightningModule):
         # for loss calc
         self.sharpen_loss_scaler = SharpenLossScaler(self.cfg)
 
-    # not used here, just a shell around the online model.
+    # used for basic inference
     def forward(self, question, question_mask, image_feats):
         return self.online_model(question, question_mask, image_feats)
 
     def sharpen_loss(self, module_logits):
         module_probs = F.softmax(module_logits, dim=-1)
-        sharpen_scale = (
-            self.sharpen_loss_scaler(self.global_step)
-        )
+        sharpen_scale = self.sharpen_loss_scaler(self.global_step)
         flat_probs = module_probs.view(-1, self.num_module)
         # the entropy of the module weights
         entropy = -((torch.log(torch.clamp(flat_probs, min=1e-5)) * flat_probs).sum(-1))
@@ -67,7 +65,9 @@ class ClevrModel(pl.LightningModule):
         return loss
 
     def vqa_loss(self, answer_logits, answer_idx):
-        return F.cross_entropy(answer_logits, answer_idx)  * self.cfg.TRAIN.VQA_LOSS_WEIGHT
+        return (
+            F.cross_entropy(answer_logits, answer_idx) * self.cfg.TRAIN.VQA_LOSS_WEIGHT
+        )
 
     def gt_loss(self, module_logits, gt_layout):
         return (
