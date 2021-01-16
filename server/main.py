@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+import numpy as np
+import skimage
 
 from server.predict import predict_sample
 from server.constants import (
@@ -45,4 +47,15 @@ def predict(cfg_id: int = 0, image_id: int = 0, question_text: str = "blank"):
         "server" + image_file_mapping[image_id],
     )
     # need to post-process res to make output reasonable!
-    print(res)
+    # output: answer text,
+    answer = res["answer_dict"].idx2word(np.argmax(res["answer_probs"]))
+    module_list = [
+        res["module_dict"].idx2word(x) for x in np.argmax(res["module_probs"], 1)
+    ]
+    return {
+        "answer": answer,
+        "module_list": module_list,
+        "question_tokens": res["qtokens"],
+        "question_attns": res["qattns"],
+        "image_attns": res["iattns"],
+    }

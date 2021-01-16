@@ -82,16 +82,23 @@ class Model(pl.LightningModule):
             image_feats.size(0), image_feats.device
         )
         module_logits = []
+        question_attns = []
+        image_attns = []
         for i in range(self.steps):
             # Controller and NMN
-            control, module_logit, module_probs = self.controller(
+            control, module_logit, module_probs, qattn = self.controller(
                 question, lstm_seq, q_vec, control, question_mask, i
             )
+            question_attns.append(qattn)
             module_logits.append(module_logit)
             att_stack, stack_ptr, mem = self.nmn(
                 control, kb_batch, module_probs, mem, att_stack, stack_ptr
             )
-        outputs = {}
+            image_attns.append((att_stack * stack_ptr[:, None, None]).sum(-1))
+        outputs = {
+            "qattns": torch.stack(question_attns, 1),
+            "iattns": torch.stack(image_attns, 1),
+        }
         # output - two layer FC
         output_logits = self.output_unit(torch.cat([q_vec, mem], 1))
         outputs["logits"] = output_logits
