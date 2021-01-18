@@ -103,7 +103,7 @@ def predict_sample(cfg, checkpoint_filename, question_text, image_file):
         else:
             model_to_load = ClevrModel
         model = model_to_load.load_from_checkpoint(
-            checkpoint_filename,
+            'server/static/models/epoch=18-step=50734.ckpt',
             cfg=cfg,
             num_choices=num_choices,
             module_names=module_names,
@@ -119,7 +119,7 @@ def predict_sample(cfg, checkpoint_filename, question_text, image_file):
         answer_output = {
             "module_probs": F.softmax(output["module_logits"][0], 1).cpu().numpy(),
             "module_dict": layout_dict,
-            "qattns": output["qattns"].cpu().numpy().tolist(),
+            "qattns": output["qattns"][0].cpu().numpy().tolist(),
             "qtokens": question_tokens,
             "iattns": output["iattns"].cpu().numpy(),
         }

@@ -1,11 +1,21 @@
 <head>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
-    </head>
-<h1> Stack Neural Module Network Demo!</h1>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container">
+<button id="theme-toggle">🌙</button>
+<h1> Stack Neural Module Network Demo</h1>
 
-<p>This is a small barebones demo of the SNMN, from this paper. I'm using my own reproduction of the paper from this repository. To use, choose an image from the list, and then choose a question to use, or type your own in.</p>
+<p>This is a small barebones demo of the SNMN, from <a href='https://github.com/ronghanghu/snmn'>this paper</a>. I'm using my own reproduction of the paper from this repository. To use, choose an image from the list, and then choose a question to use, or type your own in. You can also choose between a model trained on ground truth layouts or without them. Check out <a href=''>my blog post</a> for more details!</p>
 
+<div class="row border" id="form">
+    <div class="column">
 <form action="/model">
+    <fieldset>
 <!-- image choices -->
 <label for="images">Choose an image:</label>
 
@@ -14,29 +24,32 @@
         <option value={{i-1}}>{{i}}</option>
     {% endfor %}
 </select>
+<img class='demo-image' src="/static/sample_images/CLEVR_test_000000.png" alt="CLEVR image"><br>
 <!-- question choices -->
-<input name="question_text" type="text" list="question" />
-<datalist id="question">
-    <option>Are there any gray metal things of the same size as the purple matte cylinder?</option>
-</datalist>
-<!-- cfg choice -->
-<select name="cfg_id" id="cfg">
-    <option selected value=0>Text answer</option>
-    <option value=1>Bounding box answer</option>
+<label for="question">Ask a question (or use the suggested default):</label>
+<textarea name='question_text' id="question">What size is the brown cylinder that is the same material as the sphere?</textarea>
+
+<label for="gt">Use ground truth layout?</label>
+<select name='gt'>
+    <option value=0>Yes</option>
+    <option value=1>No</option>
 </select>
 
 <!-- submit button -->
-<input type="submit">
+<input class='button-primary' type="submit">
+</fieldset>
 </form>
+</div></div>
 
-<!-- display image -->
-<img src="/static/sample_images/CLEVR_test_000000.png" alt="CLEVR image">
-
+<br>
 <div id='results' hidden>
 <!-- final answer -->
-<h3 id='answer'>Predicted Answer: </h3>
+<div class='row border answer' >
+    <h3 id='answer'>Predicted Answer: </h3>
+</div>
+<br>
 <!-- program generated with viz -->
-<p>Below is the list of modules generated, along with the visualisations:</p>
+<p>Below is the program executed (i.e. the modules used by the network in the order they are used). Given is their name and description, a visualisation of the attention given to the question words at that timestep (darker blue means more attention), the module's effect on the stack (i.e. how many inputs it pops and outputs it pushes), and then a visualisation of the attention over the image currently placed at the top of the stack. For No-op modules, these details aren't given (since No-op does nothing).</p>
 <div id='modules'></div>
 
 
@@ -49,12 +62,8 @@
         var val = parseInt($('#images').val());
         $('img').attr("src", imageList[val]);
         // change the questions in the dropdown
-        $("#question option").remove()
         var questions = question_texts[val]
-        for (var i = 0; i < questions.length; i++) {
-            var question = questions[i]
-            $("#question").append('<option>' + question +'</option>')
-        }
+        $("#question").val(questions[0])
     });
     $('form').submit(function(e) {
         e.preventDefault();
@@ -64,17 +73,69 @@
             url: $(this).attr('action'),
             success: function(json) {
                 $('#results').removeAttr('hidden')
-                $('#answer').text(json.answer);
+                $('#answer').html('Predicted answer: <b>' + json.answer + '</b>');
                 for (var i = 0; i < json.module_list.length; i++) {
-                    var moduleText = '<p>' + json.module_list[i] + '</p>'
-                    var image = '<img src=data:image/jpeg;base64,' + json.image_attns[i] + '>'
-                    $('#modules').append('<div></div>')
+                    var moduleText = '<h3>' + (i+1) + ': ' + json.module_list[i][0] + '</h3><p>' + json.module_list[i][1] + '</p><br>'
+                    var image = '<img src=data:image/jpeg;base64,' + json.image_attns[i] + '>';
+                    if (json.module_inputs[i].length == 0) {
+                        var stack = '<p><span class=border-small><span class=highlight>Stack changes:</span> This step pops <b>no values from the stack</b> and pushes <b>' + json.outputs[i] + '</b> value(s) to the stack.</span>';
+                    } else{
+                        var stack = '<p><span class=border-small><span class=highlight>Stack changes:</span> This step pops the outputs from step(s) <b>' +  json.module_inputs[i] + '</b> and pushes <b>' + json.outputs[i] + '</b> value(s) to the stack.</span>';
+                    }
+                   
+                    var question = '<p><span class=border-small><span class=highlight>Attention distribution:</span> ';
+                    for (var j = 0; j < json.question_tokens.length; j++) {
+                        var attn = json.question_attns[i][j]
+                        console.log( json.question_attns[i])
+                        console.log(attn, i)
+                        question += '<span class=attn-span style="background: rgba(255,0,0,' + attn + ')">' + json.question_tokens[j] + '</span> '
+                    }
+                    question + '</span></p>'
+
+                    var imageText = '<h5>Below is a visualisation of the top of the stack at this step:</h5>'
+                    $('#modules').append('<div class="module-child border"></div>')
                     $('#modules div:last-child').append(moduleText)
-                    $('#modules div:last-child').append(image)
-                    console.log(image)
+                    if (json.module_list[i][0] != 'No-op') {
+                        $('#modules div:last-child').append(question)
+                        $('#modules div:last-child').append('<br>')
+                        $('#modules div:last-child').append(stack)
+                        $('#modules div:last-child').append('<br>')
+                        $('#modules div:last-child').append(imageText)
+                        $('#modules div:last-child').append(image)
+                    }
                 }
             }
         });
         return false; // cancel original event to prevent form submitting
     });
+    // below is from https://dev.to/ananyaneogi/create-a-dark-light-mode-switch-with-css-variables-34l8
+    // with minor edits
+    const toggleSwitch = document.querySelector('#theme-toggle');
+    var darkMode = false;
+    function switchTheme(e) {
+        e.preventDefault()
+        if (!darkMode) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+            $("#theme-toggle").text("☀️");
+            darkMode = true;
+        }
+        else {
+            document.documentElement.setAttribute('data-theme', 'light');
+            localStorage.setItem('theme', 'light');
+            $("#theme-toggle").text("🌙");
+            darkMode = false;
+        }
+    }
+    toggleSwitch.addEventListener('click', switchTheme, false);
+    const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+    if (currentTheme) {
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        if (currentTheme === 'dark') {
+            darkMode = true;
+            $("#theme-toggle").text("☀️");
+        }
+    }
+
 </script>
+</body>
