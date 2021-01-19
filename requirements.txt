@@ -27,7 +27,7 @@ scipy==1.5.4
 six==1.15.0
 starlette==0.13.6
 tifffile==2020.9.3
-torch==1.7.1
+https://download.pytorch.org/whl/cpu/torch-1.7.1%2Bcpu-cp36-cp36m-linux_x86_64.whl
 torchvision==0.8.2
 tqdm==4.56.0
 typing-extensions==3.7.4.3
