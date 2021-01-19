@@ -85,6 +85,7 @@
             data: $(this).serialize(),
             type: $(this).attr('GET'),
             url: $(this).attr('action'),
+            timeout: 100000,
             success: function(json) {
                 $(".loader").hide();
                 $('#results').removeAttr('hidden')
