@@ -5,7 +5,7 @@
 
 A pytorch adaption of the stack neural module network. **not an official repository**, but rather just something whipped up during a student's free time. Code largely copied from the original [snmn repository](https://github.com/ronghanghu/snmn), with the obvious changes made to make use of pytorch and pytorch-lightning.
 
-Check out the colab link above to run the code yourself, with preparation included. Otherwise, continue reading to see how to run all the code yourself. 😊
+Check out the colab link above to run the code yourself, with preparation included. Otherwise, continue reading to see how to run all the code yourself. Check out a demo of the model [here](https://snmn-pytorch.herokuapp.com/)! 😊
 
 ## Usage - Training
 
