@@ -1,7 +1,6 @@
 import re
 import io
 
-import pytorch_lightning as pl
 import skimage.io
 import skimage.transform
 import numpy as np
@@ -16,8 +15,6 @@ from clevr_model import ClevrModel
 from clevr_joint_model import ClevrJointModel
 from utils import VocabDict, sequence_mask, batch_feat_grid2bbox
 
-# set seed for repro
-pl.seed_everything(42)
 
 channel_mean = np.array([123.68, 116.779, 103.939], dtype=np.float32)
 H = 224
