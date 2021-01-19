@@ -1,9 +1,11 @@
+import os
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import numpy as np
 import skimage
+import gdown
 
 from server.predict import predict_sample
 from server.constants import (
@@ -13,6 +15,8 @@ from server.constants import (
     cfg_id_mapping,
     module_descriptions,
     readable_mapping,
+    vqa_scratch_gid,
+    vqa_gt_layout_gid,
 )
 from nmn import MODULE_INPUT_NUM, MODULE_OUTPUT_NUM
 
@@ -22,6 +26,17 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="server/static"), name="static")
 templates = Jinja2Templates(directory="server/templates")
 
+# download required files on startup
+@app.on_event("startup")
+async def startup_event():
+    # download resnet
+    import torchvision.models as models
+    models.resnet101(pretrained=True)
+    # download pretrained models
+    if not os.path.exists('server/static/models/vqa_gt_layout.ckpt'):
+        gdown.download(vqa_gt_layout_gid, 'server/static/models/vqa_gt_layout.ckpt', quiet=False)
+    if not os.path.exists('server/static/models/vqa_scratch.ckpt'):
+        gdown.download(vqa_scratch_gid, 'server/static/models/vqa_scratch.ckpt', quiet=False)
 
 @app.get("/", response_class=HTMLResponse)
 async def get_home(request: Request):

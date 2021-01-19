@@ -71,3 +71,4 @@ watchdog==0.10.4
 Werkzeug==1.0.1
 yacs==0.1.8
 zipp==3.4.0
+gdown==3.12.2

@@ -27,9 +27,11 @@
 <img class='demo-image' src="/static/sample_images/CLEVR_test_000000.png" alt="CLEVR image"><br>
 <!-- question choices -->
 <label for="question">Ask a question (or use the suggested default):</label>
+<small>The model is only trained to answer compositional-style questions - see the defaults for each image for examples.</small>
 <textarea name='question_text' id="question">What size is the brown cylinder that is the same material as the sphere?</textarea>
 
 <label for="gt">Use ground truth layout?</label>
+<small>Ground truth layout gives more interpretable module layouts, but uses extra supervision at training.</small>
 <select name='gt'>
     <option value=0>Yes</option>
     <option value=1>No</option>
@@ -42,6 +44,8 @@
 </div></div>
 
 <br>
+<div class="loader" hidden></div>
+
 <div id='results' hidden>
 <!-- final answer -->
 <div class='row border answer' >
@@ -67,12 +71,19 @@
     });
     $('form').submit(function(e) {
         e.preventDefault();
+        $('#modules').html("")
+        $('#answer').html("")
+        $("#results").hide()
+        $(".loader").removeAttr('hidden');
+        $(".loader").show();
         $.ajax({
             data: $(this).serialize(),
             type: $(this).attr('GET'),
             url: $(this).attr('action'),
             success: function(json) {
+                $(".loader").hide();
                 $('#results').removeAttr('hidden')
+                $("#results").show()
                 $('#answer').html('Predicted answer: <b>' + json.answer + '</b>');
                 for (var i = 0; i < json.module_list.length; i++) {
                     var moduleText = '<h3>' + (i+1) + ': ' + json.module_list[i][0] + '</h3><p>' + json.module_list[i][1] + '</p><br>'
@@ -86,8 +97,6 @@
                     var question = '<p><span class=border-small><span class=highlight>Attention distribution:</span> ';
                     for (var j = 0; j < json.question_tokens.length; j++) {
                         var attn = json.question_attns[i][j]
-                        console.log( json.question_attns[i])
-                        console.log(attn, i)
                         question += '<span class=attn-span style="background: rgba(255,0,0,' + attn + ')">' + json.question_tokens[j] + '</span> '
                     }
                     question + '</span></p>'

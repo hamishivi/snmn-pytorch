@@ -1,8 +1,11 @@
 import json
 
+vqa_scratch_gid = 'https://drive.google.com/uc?id=1EW3JjdAwTrrPt6VcqVk-fApGji1d6YjC' # TODO: replace this with scratch model
+vqa_gt_layout_gid = 'https://drive.google.com/uc?id=1EW3JjdAwTrrPt6VcqVk-fApGji1d6YjC'
+
 cfg_id_mapping = {0: "configs/vqa_scratch.yaml", 1: "configs/loc_scratch.yaml"}
 
-checkpoint_file_mapping = {0: "", 1: ""}
+checkpoint_file_mapping = {1: "server/static/models/vqa_scratch.ckpt", 0: "server/static/models/vqa_gt_layout.ckpt"}
 
 image_file_mapping = [
     f"/static/sample_images/CLEVR_test_0000{k:02}.png" for k in range(100)

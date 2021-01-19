@@ -14,7 +14,8 @@ body {
 }
 
 select, textarea {
-    color: var(--font-color)
+    color: var(--font-color);
+    background-color: var(--bg-color);
 }
 
 #modules {
@@ -76,6 +77,21 @@ select, textarea {
 .attn-span {
     color: var(--font-color)
 }
+
+.loader {
+    border: 16px solid var(--bg-color);
+    border-top: 16px solid #9b4dca;
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    animation: spin 2s linear infinite;
+    margin: auto;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 
 p { margin: 0; }
 

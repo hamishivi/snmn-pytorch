@@ -103,7 +103,7 @@ def predict_sample(cfg, checkpoint_filename, question_text, image_file):
         else:
             model_to_load = ClevrModel
         model = model_to_load.load_from_checkpoint(
-            'server/static/models/epoch=18-step=50734.ckpt',
+            checkpoint_filename,
             cfg=cfg,
             num_choices=num_choices,
             module_names=module_names,
