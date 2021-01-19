@@ -26,18 +26,6 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="server/static"), name="static")
 templates = Jinja2Templates(directory="server/templates")
 
-# download required files on startup
-@app.on_event("startup")
-async def startup_event():
-    # download resnet
-    import torchvision.models as models
-    models.resnet101(pretrained=True)
-    # download pretrained models
-    if not os.path.exists('server/static/models/vqa_gt_layout.ckpt'):
-        gdown.download(vqa_gt_layout_gid, 'server/static/models/vqa_gt_layout.ckpt', quiet=False)
-    if not os.path.exists('server/static/models/vqa_scratch.ckpt'):
-        gdown.download(vqa_scratch_gid, 'server/static/models/vqa_scratch.ckpt', quiet=False)
-
 @app.get("/", response_class=HTMLResponse)
 async def get_home(request: Request):
     return templates.TemplateResponse(
@@ -78,6 +66,11 @@ def predict( image_id: int = 0, question_text: str = "blank", gt: int = 0):
     assert gt in [0, 1], "gt value must be 0 or 1"
     assert image_id in range(0, 100), "Invalid image id. Must be in range 0-99."
     from config import cfg
+    # download models if havent
+    if gt == 0 and not os.path.exists('server/static/models/vqa_gt_layout.ckpt'):
+        gdown.download(vqa_gt_layout_gid, 'server/static/models/vqa_gt_layout.ckpt', quiet=False)
+    if gt == 1 and not os.path.exists('server/static/models/vqa_scratch.ckpt'):
+        gdown.download(vqa_scratch_gid, 'server/static/models/vqa_scratch.ckpt', quiet=False)
 
     cfg.merge_from_file(cfg_id_mapping[0])
     cfg.freeze()
