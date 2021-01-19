@@ -2,7 +2,6 @@ import json
 import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
-import wandb
 
 from model import Model
 from utils import sequence_mask, SharpenLossScaler, batch_feat_grid2bbox, batch_bbox_iou
