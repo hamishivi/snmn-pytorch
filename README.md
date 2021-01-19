@@ -10,9 +10,9 @@ Check out the colab link above to run the code yourself, with preparation includ
 
 ### Packages
 
-Make sure to install python and install the relevant packages:
+Make sure to install python and install the relevant packages (`dev-requirements.txt` contains the requirements for training and development):
 ```bash
-pip install -r requirements.txt
+pip install -r dev-requirements.txt
 ```
 
 Optionally, also login to [wandb](wandb.ai) for logging purposes:
