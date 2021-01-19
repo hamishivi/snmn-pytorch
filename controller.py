@@ -53,4 +53,4 @@ class Controller(nn.Module):
         else:
             next_control = (attn * lstm_context).sum(1)
 
-        return next_control, module_logits, module_probs
+        return next_control, module_logits, module_probs, attn.squeeze(2)

@@ -1,6 +1,6 @@
 import re
+import io
 
-import pytorch_lightning as pl
 import skimage.io
 import skimage.transform
 import numpy as np
@@ -8,13 +8,13 @@ import torch
 from torch import nn
 import torchvision.models as models
 import torch.nn.functional as F
+from PIL import Image
+import base64
 
 from clevr_model import ClevrModel
 from clevr_joint_model import ClevrJointModel
 from utils import VocabDict, sequence_mask, batch_feat_grid2bbox
 
-# set seed for repro
-pl.seed_everything(42)
 
 channel_mean = np.array([123.68, 116.779, 103.939], dtype=np.float32)
 H = 224
@@ -39,6 +39,26 @@ def tokenize(sentence):
     tokens = _SENTENCE_SPLIT_REGEX.split(sentence.lower())
     tokens = [t.strip() for t in tokens if len(t.strip()) > 0]
     return tokens
+
+
+def _att_softmax(att):
+    exps = np.exp(att - np.max(att))
+    softmax = exps / np.sum(exps)
+    return softmax
+
+
+def attention_interpolation(im, att):
+    softmax = _att_softmax(att)
+    att_reshaped = skimage.transform.resize(softmax, im.shape[:2], order=3)
+    # normalize the attention
+    # make sure the 255 alpha channel is at least 3x uniform attention
+    att_reshaped /= np.maximum(np.max(att_reshaped), 3.0 / att.size)
+    att_reshaped = att_reshaped[..., np.newaxis]
+
+    # make the attention area brighter than the rest of the area
+    vis_im = att_reshaped * im + (1 - att_reshaped) * im * 0.45
+    vis_im = vis_im.astype(im.dtype)
+    return vis_im
 
 
 def predict_sample(cfg, checkpoint_filename, question_text, image_file):
@@ -90,13 +110,28 @@ def predict_sample(cfg, checkpoint_filename, question_text, image_file):
         # get output
         question_inds = torch.tensor(question_inds).unsqueeze(0)
         seq_length = torch.tensor(seq_length).unsqueeze(0)
-        image_feat = torch.tensor(image_feat)
         output = model(question_inds, sequence_mask(seq_length), image_feat)
         # return output.
+        # image
         answer_output = {
             "module_probs": F.softmax(output["module_logits"][0], 1).cpu().numpy(),
             "module_dict": layout_dict,
+            "qattns": output["qattns"][0].cpu().numpy().tolist(),
+            "qtokens": question_tokens,
+            "iattns": output["iattns"].cpu().numpy(),
         }
+        # image attn vis
+        attn_imgs = []
+        for i in range(output["iattns"].size(1)):
+            a_img = attention_interpolation(im, output["iattns"][0, i].numpy())
+            a_img = Image.fromarray(a_img.astype("uint8"))
+            rawBytes = io.BytesIO()
+            a_img.save(rawBytes, "JPEG")
+            rawBytes.seek(0)
+            a_img_base64 = base64.b64encode(rawBytes.read())
+            attn_imgs.append(a_img_base64)
+
+        answer_output["iattns"] = attn_imgs
         if cfg.MODEL.BUILD_VQA:
             answer_output["answer_probs"] = (
                 F.softmax(output["logits"][0], 0).cpu().numpy()
