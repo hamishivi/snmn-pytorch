@@ -1,12 +1,13 @@
 # SNMN-pytorch
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1aaTKkApKLeQOuRdXRtA2mSi3Z87ll8RC#scrollTo=Xm5CpLGbMc1r)
+![Heroku](https://pyheroku-badge.herokuapp.com/?app=snmn-pytorch&style=flat)
 
 A pytorch adaption of the stack neural module network. **not an official repository**, but rather just something whipped up during a student's free time. Code largely copied from the original [snmn repository](https://github.com/ronghanghu/snmn), with the obvious changes made to make use of pytorch and pytorch-lightning.
 
 Check out the colab link above to run the code yourself, with preparation included. Otherwise, continue reading to see how to run all the code yourself. 😊
 
-## Usage
+## Usage - Training
 
 ### Packages
 
@@ -15,10 +16,12 @@ Make sure to install python and install the relevant packages (`dev-requirements
 pip install -r dev-requirements.txt
 ```
 
-Optionally, also login to [wandb](wandb.ai) for logging purposes:
+Then login to [wandb](wandb.ai) for logging purposes:
 ```bash
 wandb login
 ```
+
+I use pytorch-lightning for training, so you can swap to other logging solutions by modifying `train.py` fairly easily.
 
 ### Download and Preprocess Data
 
@@ -108,4 +111,6 @@ As this is a re-implementation, performance is not exactly the same as reported 
 
 ## Demo
 
-TBA!
+You can see a visualisation of the visual question answering task (with modules visualised) [here](https://snmn-pytorch.herokuapp.com/). Note that it's a free heroku app I setup, so the first inference run takes a fair bit of time to run while it downloads the pretrained models. For more details, check out [my blog post on this project](https://hamishivi.github.io).
+
+You should be able to run the app yourself by running `uvicorn server.main:app`. Check out [uvicorn's options](https://www.uvicorn.org/#usage) for details on how to set specific ports etc. The server will download the pretrained models required for inference when first needed, so make sure you have ~300MB free for the three different pretrained models used.
