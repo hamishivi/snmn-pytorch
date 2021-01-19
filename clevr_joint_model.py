@@ -2,7 +2,6 @@ import json
 import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
-import wandb
 
 from model import Model
 from clevr_model import ClevrModel
