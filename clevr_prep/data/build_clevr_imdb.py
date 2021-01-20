@@ -36,6 +36,7 @@ def build_imdb(image_set):
         question_str = q["question"]
         question_tokens = tokenize(question_str)
         bbox = q["bbox"] if "bbox" in q else None
+        answer = q["answer"] if "answer" in q else None
         gt_layout_tokens = q["gt_layout"] if "gt_layout" in q else None
 
         iminfo = dict(
@@ -45,6 +46,7 @@ def build_imdb(image_set):
             question_str=question_str,
             question_tokens=question_tokens,
             bbox=bbox,
+            answer=answer,
             gt_layout_tokens=gt_layout_tokens,
         )
         imdb[n_q] = iminfo
