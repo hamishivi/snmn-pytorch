@@ -110,7 +110,11 @@
                     var imageText = '<h5>Below is a visualisation of the top of the stack at this step:</h5>'
                     $('#modules').append('<div class="module-child border"></div>')
                     $('#modules div:last-child').append(moduleText)
-                    if (json.module_list[i][0] != 'No-op') {
+                    if (json.module_list[i][0] == 'Answer' || json.module_list[i][0] == 'Compare') {
+                        $('#modules div:last-child').append(question)
+                        $('#modules div:last-child').append('<br>')
+                        $('#modules div:last-child').append('<p>This step produces a memory vector used to produce the final answer given above using the top ' + json.outputs[i] + ' stack value(s). It leaves the stack untouched.</p>')
+                    } else if (json.module_list[i][0] != 'No-op') {
                         $('#modules div:last-child').append(question)
                         $('#modules div:last-child').append('<br>')
                         $('#modules div:last-child').append(stack)
