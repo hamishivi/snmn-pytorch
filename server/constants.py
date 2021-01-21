@@ -43,6 +43,6 @@ readable_mapping = {
     '_And': 'And',
     '_Or': 'Or',
     '_Scene': 'Scene',
-    '_DescribeOne': 'Describe One',
-    '_DescribeTwo': 'Describe Two',
+    '_DescribeOne': 'Answer',
+    '_DescribeTwo': 'Compare',
 }
