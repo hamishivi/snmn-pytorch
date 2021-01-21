@@ -42,6 +42,7 @@ class Model(pl.LightningModule):
                 cfg.MODEL.NMN.MEM_DIM + cfg.MODEL.LSTM_DIM, cfg.MODEL.VQA_OUTPUT_DIM
             ),
             nn.ELU(),
+            nn.Dropout(1 - self.cfg.TRAIN.DROPOUT_KEEP_PROB),
             nn.Linear(cfg.MODEL.VQA_OUTPUT_DIM, self.num_choices),
         )
         # output for clevr-ref
