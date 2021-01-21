@@ -392,14 +392,14 @@ def _sharpen_ptr(stack_ptr, cfg):
     else:
         # soft (differentiable) sharpening with softmax
         temperature = cfg.MODEL.NMN.STACK.SOFT_SHARPEN_TEMP
-        new_stack_ptr = F.softmax(stack_ptr / temperature, 1)  # todo: check dim here
+        new_stack_ptr = F.softmax(stack_ptr / temperature, 1)
     return new_stack_ptr
 
 
 def _spatial_softmax(att_raw):
     N = att_raw.size(0)
     att_softmax = F.softmax(att_raw.view(N, -1), dim=1)
-    att_softmax = att_softmax.view(att_raw.size())  # idk if this is legit torch...
+    att_softmax = att_softmax.view(att_raw.size())
     return att_softmax
 
 
