@@ -21,6 +21,8 @@ class Model(pl.LightningModule):
         self.module_names = module_names
         self.steps = cfg.MODEL.T_CTRL
         self.q_embed = nn.Embedding(num_vocab, cfg.MODEL.EMBED_DIM)
+        # embedding init needs to have standard dev 1/root(d)
+        nn.init.normal_(self.q_embed.weight, mean=0.0, std=np.sqrt(1/cfg.MODEL.EMBED_DIM))
         self.q_enc = nn.LSTM(
             cfg.MODEL.EMBED_DIM,
             cfg.MODEL.LSTM_DIM // 2,
