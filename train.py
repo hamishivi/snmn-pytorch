@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 
 from clevr import ClevrDataModule
-from clevr_model import ClevrModel
+from clevr_model import ClevrModel, init_weights
 from clevr_joint_model import ClevrJointModel
 from config import cfg
 
@@ -64,6 +64,7 @@ if cfg.LOAD:
     )
 else:
     model = model_to_load(cfg, num_choices, module_names, vocab_size, img_sizes)
+    model.apply(init_weights)
 
 wandb_logger = WandbLogger(project=cfg.WANDB_PROJECT_NAME, log_model=True)
 

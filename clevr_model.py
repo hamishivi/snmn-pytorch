@@ -1,5 +1,6 @@
 import json
 import torch
+from torch import nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 
@@ -178,12 +179,25 @@ class ClevrModel(pl.LightningModule):
                 json.dump(flattened_preds, w)
 
     def configure_optimizers(self):
+        # the og code does no-bias regularisation!
+        biases = [param for name, param in self.online_model.named_parameters() if 'bias' in name]
+        weights = [param for name, param in self.online_model.named_parameters() if 'bias' not in name]
         optimizer = torch.optim.Adam(
-            self.parameters(),
+            [
+                { 'params': biases, 'weight_decay': 0 },
+                { 'params': weights, 'weight_decay': self.cfg.TRAIN.WEIGHT_DECAY }
+
+            ],
             lr=self.cfg.TRAIN.SOLVER.LR,
-            weight_decay=self.cfg.TRAIN.WEIGHT_DECAY,
         )
         return optimizer
+
+# to override pytorch default inits
+def init_weights(m):
+    if type(m) == nn.Linear or type(m) == nn.Conv2d:
+        nn.init.xavier_uniform_(m.weight)
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0)
 
 
 # ema accumulation

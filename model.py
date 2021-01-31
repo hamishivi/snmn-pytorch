@@ -65,7 +65,7 @@ class Model(pl.LightningModule):
             control_dim = cfg.MODEL.EMBED_DIM
         # random normal with std dev 1/sqrt(ctrl dim)
         self.init_ctrl = nn.Parameter(
-            torch.randn(control_dim) * np.sqrt(1 / cfg.MODEL.LSTM_DIM)
+            torch.empty(control_dim).normal_(mean=0, std=np.sqrt(1 / cfg.MODEL.LSTM_DIM))
         )
 
     def forward(self, question, question_mask, image_feats):

@@ -55,12 +55,12 @@ class NMN(nn.Module):
             control_dim = cfg.MODEL.EMBED_DIM
         # find
         self.find_ci = nn.Linear(control_dim, cfg.MODEL.KB_DIM)
-        self.find_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1, 1)
+        self.find_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1)
         # transform
         self.transform_ci = nn.Linear(control_dim, cfg.MODEL.KB_DIM)
-        self.transform_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1, 1)
+        self.transform_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1)
         # scene
-        self.scene_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1, 1)
+        self.scene_conv = nn.Conv2d(cfg.MODEL.KB_DIM, 1, 1)
         # describe one
         self.describeone_ci = nn.Linear(control_dim, cfg.MODEL.KB_DIM)
         self.describeone_mem = nn.Linear(
