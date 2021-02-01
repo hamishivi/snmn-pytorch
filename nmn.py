@@ -27,8 +27,8 @@ MODULE_OUTPUT_NUM = {
     "_And": 1,
     "_Or": 1,
     "_Scene": 1,
-    "_DescribeOne": 0,
-    "_DescribeTwo": 0,
+    "_DescribeOne": 1,
+    "_DescribeTwo": 1,
 }
 
 
