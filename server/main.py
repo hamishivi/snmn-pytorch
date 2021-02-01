@@ -53,13 +53,19 @@ def module_inputs(module_names):
         # so sometimes we get invalid stack use.
         output.append(num_outputs)
         values_used.append([])
-        for j in range(num_inputs):
-            if len(stack) > 0:
-                values_used[-1].append(stack.pop())
-        for j in range(num_outputs):
-            stack.append(i + 1)
-        # save stack
-        stacks.append([x for x in stack])
+        # stack doesnt change.
+        if module == "_DescribeOne" or module == "_DescribeTwo":
+            for j in range(1, num_inputs + 1):
+                if len(stack) >= j:
+                    values_used[-j].append(stack[-j])
+        else:
+            for j in range(num_inputs):
+                if len(stack) > 0:
+                    values_used[-1].append(stack.pop())
+            for j in range(num_outputs):
+                stack.append(i + 1)
+            # save stack
+            stacks.append([x for x in stack])
     return values_used, stacks, output
 
 

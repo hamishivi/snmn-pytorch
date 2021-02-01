@@ -113,7 +113,7 @@
                     if (json.module_list[i][0] == 'Answer' || json.module_list[i][0] == 'Compare') {
                         $('#modules div:last-child').append(question)
                         $('#modules div:last-child').append('<br>')
-                        $('#modules div:last-child').append('<p>This step produces a memory vector used to produce the final answer given above using the value from step(s) <b>' + json.module_inputs[i] + '</b>. It pushes its input back onto the stack.</p>')
+                        $('#modules div:last-child').append('<p>This step produces a memory vector used to produce the final answer given above using the value from step(s) <b>' + json.module_inputs[i] + '</b>.</p>')
                     } else if (json.module_list[i][0] != 'No-op') {
                         $('#modules div:last-child').append(question)
                         $('#modules div:last-child').append('<br>')
