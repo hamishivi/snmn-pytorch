@@ -1,7 +1,9 @@
 import json
 
 vqa_scratch_gid = "https://drive.google.com/uc?id=1EKpQXFRHGja3qeMOJcsyyEkuc9yI6_DY"
-vqa_gt_layout_gid = "https://drive.google.com/uc?id=1EW3JjdAwTrrPt6VcqVk-fApGji1d6YjC"
+vqa_gt_layout_gid = (
+    "https://drive.google.com/uc?id=1EKpQXFRHGja3qeMOJcsyyEkuc9yI6_DY"
+)  # TODO: replace with proper gt.
 
 cfg_id_mapping = {0: "configs/vqa_scratch.yaml", 1: "configs/loc_scratch.yaml"}
 
