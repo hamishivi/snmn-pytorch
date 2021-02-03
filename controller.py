@@ -27,7 +27,10 @@ class Controller(nn.Module):
         self.control_question = linear(dim + control_dim, dim)
         self.attn = linear(dim, 1)
 
-        self.module_fc = nn.Linear(dim, self.num_modules, bias=False)
+        self.module_fc = nn.Sequential(
+            nn.Linear(dim, cfg.MODEL.LSTM_DIM),
+            nn.ELU(),
+            nn.Linear(cfg.MODEL.LSTM_DIM, num_modules))
 
     def forward(
         self, embed_context, lstm_context, question, control, question_mask, step

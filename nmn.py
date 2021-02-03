@@ -430,4 +430,4 @@ def _build_module_validity_mat(module_names, cfg):
         max_ptr_pos = stack_len - 1 + MODULE_INPUT_NUM[m] - MODULE_OUTPUT_NUM[m]
         module_validity_mat[min_ptr_pos : max_ptr_pos + 1, n_m] = 1.0
 
-    return module_validity_mat
+    return module_validity_mat.float()
