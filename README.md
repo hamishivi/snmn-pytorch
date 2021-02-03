@@ -1,11 +1,13 @@
 # SNMN-pytorch
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1aaTKkApKLeQOuRdXRtA2mSi3Z87ll8RC#scrollTo=Xm5CpLGbMc1r)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1eGroHrcsGu7OVIqexjouHzV0ETBu8dV0?usp=sharing)
 ![Heroku](https://pyheroku-badge.herokuapp.com/?app=snmn-pytorch&style=flat)
 
 A pytorch adaption of the stack neural module network. **not an official repository**, but rather just something whipped up during a student's free time. Code largely copied from the original [snmn repository](https://github.com/ronghanghu/snmn), with the obvious changes made to make use of pytorch and pytorch-lightning.
 
 Check out the colab link above to train the model yourself, with preprocessing included. Otherwise, continue reading to see how to do it yourself. Check out a demo of the model [here](https://snmn-pytorch.herokuapp.com/), and my own blog post on this project [here](https://hamishivi.github.io)! 😊
+
+**Note: I'm still playing slightly with this repository due to VQA results not being quite up to par. I may make updates now and then.**
 
 ## Usage - Training
 
@@ -98,6 +100,8 @@ Where the config file is one of the files present in the `configs` directory. Lo
 ## Results
 
 As this is a re-implementation, performance is not exactly the same as reported in the original repository. See the table below for the expected performance on our implementation and the original implementation for each provided config file. For the joint configs (which have two metrics as they jointly train on two tasks), we provide the VQA (aka regular CLEVR) accuracy first, and then the CLEVR-ref accuracy.
+
+**I am currently collecting these results, will update soon**.
 
 | Config | Description | Original Performance | Our Performance |
 | ------ | ----------- | -------------------- | --------------- |

@@ -15,7 +15,7 @@
 <button id="theme-toggle">🌙</button>
 <h1> Stack Neural Module Network Demo</h1>
 
-<p>This is a small barebones demo of the SNMN, from <a href='https://github.com/ronghanghu/snmn'>this paper</a>. I'm using my own reproduction of the paper from this repository. To use, choose an image from the list, and then choose a question to use, or type your own in. You can also choose between a model trained on ground truth layouts or without them. Check out <a href=''>my blog post</a> for more details!</p>
+<p>This is a small barebones demo of the SNMN, from <a href='https://github.com/ronghanghu/snmn'>this paper</a>. I'm using my own reproduction of the paper from this repository. To use, choose an image from the list, and then choose a question to use, or type your own in. You can also choose between a model trained on ground truth layouts or without them. Check out <a href='https://hamishivi.github.io/2021/01/31/snmn'>my blog post</a> for more details!</p>
 
 <div class="row border" id="form">
     <div class="column">
@@ -113,7 +113,7 @@
                     if (json.module_list[i][0] == 'Answer' || json.module_list[i][0] == 'Compare') {
                         $('#modules div:last-child').append(question)
                         $('#modules div:last-child').append('<br>')
-                        $('#modules div:last-child').append('<p>This step produces a memory vector used to produce the final answer given above using the value from step(s) <b>' + json.module_inputs[i] + '</b>. It leaves the stack untouched.</p>')
+                        $('#modules div:last-child').append('<p>This step produces a memory vector used to produce the final answer given above using the value from step(s) <b>' + json.module_inputs[i] + '</b>.</p>')
                     } else if (json.module_list[i][0] != 'No-op') {
                         $('#modules div:last-child').append(question)
                         $('#modules div:last-child').append('<br>')
