@@ -94,6 +94,11 @@ class Model(pl.LightningModule):
             )
             question_attns.append(qattn)
             module_logits.append(module_logit)
+            # module validity
+            module_validity = stack_ptr.float() @ self.nmn.module_validity_mat.to(stack_ptr.device)
+            module_probs = module_probs * module_validity
+            module_probs = module_probs / module_probs.sum(1).unsqueeze(1)
+            # nmn
             att_stack, stack_ptr, mem = self.nmn(
                 control, kb_batch, module_probs, mem, att_stack, stack_ptr
             )
