@@ -1,5 +1,5 @@
 import os
-import sys
+from datetime import datetime
 from glob import glob
 import argparse
 
@@ -10,6 +10,9 @@ import torch
 from torch import nn
 import torchvision.models as models
 from tqdm import tqdm
+from torch.utils.data import Dataset, DataLoader
+
+batch_size = 64
 
 channel_mean = np.array([123.68, 116.779, 103.939], dtype=np.float32)
 
@@ -49,46 +52,63 @@ class ResnetC4(nn.Module):
         return x
 
 
-# we assume there's a gpu on offer and a single gpu at that.
 resnet101 = models.resnet101(pretrained=True)
-resnet101_c4 = ResnetC4(resnet101).cuda()
 
 
-def extract_image_resnet101_c4(impath):
-    with torch.no_grad():
+class ImageDataset(Dataset):
+    def __init__(self, image_paths):
+        self.im_paths = image_paths
+
+    def __len__(self):
+        return len(self.im_paths)
+
+    def __getitem__(self, idx):
+        impath = self.im_paths[idx]
         im = skimage.io.imread(impath)[..., :3]
         assert im.dtype == np.uint8
         im = skimage.transform.resize(im, [H, W], preserve_range=True)
-        im_val = im[np.newaxis, ...] - channel_mean
+        im_val = im - channel_mean
         # pytorch uses channels-first, so we reorder stuff to fit this.
-        im_val = np.swapaxes(im_val, 3, 1)  # [B,H,W,C] -> [B,C,W,H]
-        im_val = np.swapaxes(im_val, 2, 3)  # [B,C,W,H] -> [B,C,H,W]
-        resnet101_c4_val = resnet101_c4(
-            torch.tensor(im_val, device="cuda", dtype=torch.float)
-        )
-        # reorder again
-        resnet101_c4_val = resnet101_c4_val.permute([0, 2, 3, 1])
-        return resnet101_c4_val.cpu().numpy()
+        im_val = np.swapaxes(im_val, 2, 0)  # [H,W,C] -> [C,W,H]
+        im_val = np.swapaxes(im_val, 1, 2)  # [C,W,H] -> [C,H,W]
+        return impath, torch.tensor(im_val, dtype=torch.float)
 
 
-def extract_dataset_resnet101_c4(image_dir, save_dir, ext_filter="*.png"):
+def batched_extract(resnet101_c4, vals):
+    resnet101_c4_val = resnet101_c4(vals).cpu()
+    resnet101_c4_val = resnet101_c4_val.permute([0, 2, 3, 1])
+    return resnet101_c4_val
+
+
+def extract_dataset_resnet101_c4(device, image_dir, save_dir, ext_filter="*.png"):
+    resnet101_c4 = ResnetC4(resnet101).to(device)
     image_list = glob(image_dir + "/" + ext_filter)
     os.makedirs(save_dir, exist_ok=True)
+    imdataset = ImageDataset(image_list)
+    imloader = DataLoader(imdataset, num_workers=2, batch_size=batch_size)
+    with torch.no_grad():
+        for impaths, imvals in tqdm(imloader):
+            res = batched_extract(resnet101_c4, imvals.to(device))
+            for i, path in enumerate(impaths):
+                image_name = os.path.basename(path).split(".")[0]
+                save_path = os.path.join(save_dir, image_name + ".npy")
+                np.save(save_path, res[i].numpy())
 
-    for n_im, impath in tqdm(enumerate(image_list)):
-        image_name = os.path.basename(impath).split(".")[0]
-        save_path = os.path.join(save_dir, image_name + ".npy")
-        if not os.path.exists(save_path):
-            resnet101_c4_val = extract_image_resnet101_c4(impath)
-            np.save(save_path, resnet101_c4_val)
+
+def main():
+    dev = torch.device("cuda")  # assume cuda available
+    image_sets = ["train", "val", "test"]
+    if args.loc:
+        image_sets = ["loc_train", "loc_val", "loc_test"]
+    for image_set in image_sets:
+        now = datetime.now()
+        print(f'{now.strftime("%H:%M:%S")}: extracting {image_set}')
+        extract_dataset_resnet101_c4(
+            dev,
+            os.path.join(image_basedir, image_set),
+            os.path.join(save_basedir, image_set),
+        )
 
 
-image_sets = ["train", "val", "test"]
-if args.loc:
-    image_sets = ["loc_train", "loc_val", "loc_test"]
-for image_set in image_sets:
-    print("Extracting image set " + image_set)
-    extract_dataset_resnet101_c4(
-        os.path.join(image_basedir, image_set), os.path.join(save_basedir, image_set)
-    )
-    print("Done.")
+if __name__ == "__main__":
+    main()
