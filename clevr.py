@@ -44,7 +44,7 @@ class PreprocessedClevr(Dataset):
             self.prune_filter_module = prune_filter_module
         # load one feature map to peek its size
         feats = np.load(self.imdb[0]["feature_path"])
-        self.feat_H, self.feat_W, self.feat_D = feats.shape[1:]
+        self.feat_H, self.feat_W, self.feat_D = feats.shape
         if self.load_bbox:
             self.img_H = img_h
             self.img_W = img_w
@@ -90,7 +90,7 @@ class PreprocessedClevr(Dataset):
         batch = {
             "question_inds": torch.tensor(question_inds),
             "seq_length": torch.tensor(seq_length),
-            "image_feat": torch.tensor(image_feat).squeeze(0),
+            "image_feat": torch.tensor(image_feat),
             "image_path": image_path,
         }
         if self.load_answer:
