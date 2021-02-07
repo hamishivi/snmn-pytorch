@@ -2,6 +2,7 @@
 DataLoader class for CLEVR used in training.
 Also define DataModule for pytorch-lightning-style training.
 """
+from numpy.lib.npyio import load
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
@@ -23,15 +24,21 @@ class PreprocessedClevr(Dataset):
         img_h,
         img_w,
         prune_filter_module=True,
+        load_answer=True,
+        load_bbox=True,
     ):
         self.imdb = np.load(imdb_file, allow_pickle=True)
         self.vocab_dict = VocabDict(vocab_question_file)
         self.t_encoder = t_encoder
         # peek one example to see whether answer and gt_layout are in the data
         self.load_answer = (
-            "answer" in self.imdb[0] and self.imdb[0]["answer"] is not None
+            "answer" in self.imdb[0]
+            and self.imdb[0]["answer"] is not None
+            and load_answer
         )
-        self.load_bbox = "bbox" in self.imdb[0] and self.imdb[0]["bbox"] is not None
+        self.load_bbox = (
+            "bbox" in self.imdb[0] and self.imdb[0]["bbox"] is not None and load_bbox
+        )
         self.load_gt_layout = load_gt_layout and (
             "gt_layout_tokens" in self.imdb[0]
             and self.imdb[0]["gt_layout_tokens"] is not None
@@ -226,6 +233,8 @@ class ClevrDataModule(pl.LightningDataModule):
             self.cfg.VOCAB_LAYOUT_FILE,
             self.cfg.MODEL.H_IMG,
             self.cfg.MODEL.W_IMG,
+            load_answer=self.cfg.MODEL.BUILD_VQA,
+            load_bbox=self.cfg.MODEL.BUILD_LOC,
         )
 
     def _construct_joint_(self, filename_vqa, filename_loc):
@@ -239,6 +248,8 @@ class ClevrDataModule(pl.LightningDataModule):
             self.cfg.VOCAB_LAYOUT_FILE,
             self.cfg.MODEL.H_IMG,
             self.cfg.MODEL.W_IMG,
+            load_answer=True,
+            load_bbox=False,
         )
         loc = PreprocessedClevr(
             filename_loc,
@@ -250,6 +261,8 @@ class ClevrDataModule(pl.LightningDataModule):
             self.cfg.VOCAB_LAYOUT_FILE,
             self.cfg.MODEL.H_IMG,
             self.cfg.MODEL.W_IMG,
+            load_answer=False,
+            load_bbox=True,
         )
         return ConcatDataset(clevr, loc)
 
