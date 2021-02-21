@@ -1,9 +1,8 @@
 import json
 
-vqa_scratch_gid = "https://drive.google.com/uc?id=1EKpQXFRHGja3qeMOJcsyyEkuc9yI6_DY"
-vqa_gt_layout_gid = (
-    "https://drive.google.com/uc?id=1EKpQXFRHGja3qeMOJcsyyEkuc9yI6_DY"
-)  # TODO: replace with proper gt.
+# vqa_scratch_url = "https://api.wandb.ai/files/hamishivi/snmn-pytorch/1c6nxnkd/snmn-pytorch/1c6nxnkd/checkpoints/epoch=18-step=199999.ckpt"
+vqa_gt_layout_url = "https://api.wandb.ai/files/hamishivi/snmn-pytorch/mk6iew0k/snmn-pytorch/mk6iew0k/checkpoints/epoch=18-step=199999.ckpt"
+vqa_scratch_url = "https://api.wandb.ai/files/hamishivi/snmn-pytorch/gd8pmlgb/snmn-pytorch/gd8pmlgb/checkpoints/epoch=18-step=199999.ckpt"
 
 cfg_id_mapping = {0: "configs/vqa_scratch.yaml", 1: "configs/loc_scratch.yaml"}
 

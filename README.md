@@ -109,8 +109,8 @@ As this is a re-implementation, performance is not exactly the same as reported 
 | `vqa_gt_layout` | regular CLEVR dataset, training on final answers and ground truth module layouts. | 96.6% | - |
 | `loc_scratch` | CLEVR-ref dataset, training on bounding boxes. | 93.4% | - |
 | `loc_gt_layout` | CLEVR-ref dataset, training on bounding boxes and ground truth module layouts. | 96.0% | - |
-| `joint_scratch` | CLEVR + CLEVR-ref together, training on final answers and bounding boxes. |  93.9% / 95.4% | - |
-| `joint_gt_layout` | CLEVR + CLEVR-ref together, training on answers, bounding boxes, and ground truth module layouts. | 96.5% / 96.2% | - |
+| `joint_scratch` | CLEVR + CLEVR-ref together, training on final answers and bounding boxes. |  93.9% / 95.4% | 81.4% / 90.5% |
+| `joint_gt_layout` | CLEVR + CLEVR-ref together, training on answers, bounding boxes, and ground truth module layouts. | 96.5% / 96.2% | 95.6% / 95.9% |
 
 
 ## Demo

@@ -3,6 +3,7 @@ MODEL:
     LINEAR_MODULE_WEIGHTS: False
     USE_WORD_EMBED: True
   NMN:
+    VALIDATE_MODULES: False # this stops module re-use, but lower perf.
     STACK:
       LENGTH: 8
       GUARD_STACK_PTR: True

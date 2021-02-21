@@ -4,8 +4,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import numpy as np
-import skimage
-import gdown
+import urllib.request
 
 from server.predict import predict_sample
 from server.constants import (
@@ -15,8 +14,8 @@ from server.constants import (
     cfg_id_mapping,
     module_descriptions,
     readable_mapping,
-    vqa_scratch_gid,
-    vqa_gt_layout_gid,
+    vqa_scratch_url,
+    vqa_gt_layout_url,
 )
 from nmn import MODULE_INPUT_NUM, MODULE_OUTPUT_NUM
 
@@ -77,12 +76,12 @@ def predict(image_id: int = 0, question_text: str = "blank", gt: int = 0):
 
     # download models if havent
     if gt == 0 and not os.path.exists("server/static/models/vqa_gt_layout.ckpt"):
-        gdown.download(
-            vqa_gt_layout_gid, "server/static/models/vqa_gt_layout.ckpt", quiet=False
+        urllib.request.urlretrieve(
+            vqa_gt_layout_url, "server/static/models/vqa_gt_layout.ckpt"
         )
     if gt == 1 and not os.path.exists("server/static/models/vqa_scratch.ckpt"):
-        gdown.download(
-            vqa_scratch_gid, "server/static/models/vqa_scratch.ckpt", quiet=False
+        urllib.request.urlretrieve(
+            vqa_scratch_url, "server/static/models/vqa_scratch.ckpt"
         )
 
     cfg.merge_from_file(cfg_id_mapping[0])
