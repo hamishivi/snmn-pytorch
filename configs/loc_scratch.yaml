@@ -8,6 +8,7 @@ MODEL:
     LINEAR_MODULE_WEIGHTS: True
     USE_WORD_EMBED: True
   NMN:
+    VALIDATE_MODULES: False
     STACK:
       LENGTH: 8
       GUARD_STACK_PTR: True

@@ -95,9 +95,10 @@ class Model(pl.LightningModule):
             question_attns.append(qattn)
             module_logits.append(module_logit)
             # module validity
-            module_validity = stack_ptr.float() @ self.nmn.module_validity_mat.to(stack_ptr.device)
-            module_probs = module_probs * module_validity
-            module_probs = module_probs / module_probs.sum(1).unsqueeze(1)
+            if self.cfg.MODEL.NMN.VALIDATE_MODULES:
+                module_validity = stack_ptr.float() @ self.nmn.module_validity_mat.to(stack_ptr.device)
+                module_probs = module_probs * module_validity
+                module_probs = module_probs / module_probs.sum(1).unsqueeze(1)
             # nmn
             att_stack, stack_ptr, mem = self.nmn(
                 control, kb_batch, module_probs, mem, att_stack, stack_ptr
@@ -108,8 +109,9 @@ class Model(pl.LightningModule):
             "iattns": torch.stack(image_attns, 1),
         }
         # output - two layer FC
-        output_logits = self.output_unit(torch.cat([q_vec, mem], 1))
-        outputs["logits"] = output_logits
+        if self.cfg.MODEL.BUILD_VQA:
+            output_logits = self.output_unit(torch.cat([q_vec, mem], 1))
+            outputs["logits"] = output_logits
         # output for clevr-ref
         if self.cfg.MODEL.BUILD_LOC:
             att_last = self.nmn.get_stack_value(att_stack, stack_ptr)
