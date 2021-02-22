@@ -14,13 +14,11 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "config",
     type=str,
-    nargs="?",
+    nargs=1,
     default=None,
     help="config yaml file, see configs folder for examples to use.",
 )
-parser.add_argument(
-    "model", type=str, nargs="?", default=None, help="saved model file."
-)
+parser.add_argument("model", type=str, nargs=1, default=None, help="saved model file.")
 
 args = parser.parse_args()
 
@@ -54,16 +52,13 @@ model = model_to_load.load_from_checkpoint(
     img_sizes=img_sizes,
 )
 
-logger = CSVLogger("logs", name=f"{args.config}_dev")
-
 trainer = pl.Trainer(
     gpus=-1,
     gradient_clip_val=cfg.TRAIN.GRAD_MAX_NORM,
     progress_bar_refresh_rate=20,
     reload_dataloaders_every_epoch=True,
     max_steps=cfg.TRAIN.MAX_ITER,
-    logger=logger,
     deterministic=True,
 )
 
-trainer.fit(model, clevr.val_dataloader())
+trainer.test(model, clevr.val_dataloader())

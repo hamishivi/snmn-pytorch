@@ -93,7 +93,7 @@ class ClevrModel(pl.LightningModule):
         # we support training on vqa only, loc only, or both, depending on these flags.
         if self.cfg.MODEL.BUILD_VQA and answer_idx is not None:
             loss += self.vqa_loss(outputs["logits"], answer_idx)
-            self.train_acc(outputs["logits"], answer_idx)
+            self.train_acc(F.softmax(outputs["logits"], dim=1), answer_idx)
             self.log("train/vqa_acc", self.train_acc)
         if self.cfg.MODEL.BUILD_LOC and bbox_ind is not None:
             loss += self.loc_loss(
@@ -142,7 +142,7 @@ class ClevrModel(pl.LightningModule):
         # we support training on vqa only, loc only, or both, depending on these flags.
         if self.cfg.MODEL.BUILD_VQA and answer_idx is not None:
             loss += self.vqa_loss(outputs["logits"], answer_idx)
-            self.valid_acc(outputs["logits"], answer_idx)
+            self.valid_acc(F.softmax(outputs["logits"], dim=1), answer_idx)
             self.log("valid/vqa_acc", self.valid_acc, on_step=False, on_epoch=True)
         if self.cfg.MODEL.BUILD_LOC and bbox_ind is not None:
             loss += self.loc_loss(
@@ -170,27 +170,30 @@ class ClevrModel(pl.LightningModule):
         self.log("valid/loss", loss, on_step=False, on_epoch=True)
         return loss
 
-    def test_epoch_end(self, test_step_outputs):
-        if self.cfg.MODEL.BUILD_VQA:
-            flattened_preds = (
-                torch.flatten(torch.cat(test_step_outputs)).cpu().numpy().tolist()
-            )
-            with open("test_preds.json", "w") as w:
-                json.dump(flattened_preds, w)
+    def test_step(self, batch, batch_idx, use_sharpen=True):
+        return self.validation_step(batch, batch_idx, use_sharpen)
 
     def configure_optimizers(self):
         # the og code does no-bias regularisation!
-        biases = [param for name, param in self.online_model.named_parameters() if 'bias' in name]
-        weights = [param for name, param in self.online_model.named_parameters() if 'bias' not in name]
+        biases = [
+            param
+            for name, param in self.online_model.named_parameters()
+            if "bias" in name
+        ]
+        weights = [
+            param
+            for name, param in self.online_model.named_parameters()
+            if "bias" not in name
+        ]
         optimizer = torch.optim.Adam(
             [
-                { 'params': biases, 'weight_decay': 0 },
-                { 'params': weights, 'weight_decay': self.cfg.TRAIN.WEIGHT_DECAY }
-
+                {"params": biases, "weight_decay": 0},
+                {"params": weights, "weight_decay": self.cfg.TRAIN.WEIGHT_DECAY},
             ],
             lr=self.cfg.TRAIN.SOLVER.LR,
         )
         return optimizer
+
 
 # to override pytorch default inits
 def init_weights(m):

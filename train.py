@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "config",
     type=str,
-    nargs="?",
+    nargs=1,
     default=None,
     help="config yaml file, see configs folder for examples to use.",
 )

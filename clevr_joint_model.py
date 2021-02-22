@@ -29,3 +29,6 @@ class ClevrJointModel(ClevrModel):
         loc_batch = batch["loc"]
         loss += super().validation_step(loc_batch, batch_idx)
         return loss
+
+    def test_step(self, batch, batch_idx):
+        return self.validation_step(batch, batch_idx)
