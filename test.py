@@ -14,11 +14,11 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "config",
     type=str,
-    nargs=1,
     default=None,
     help="config yaml file, see configs folder for examples to use.",
 )
-parser.add_argument("model", type=str, nargs=1, default=None, help="saved model file.")
+parser.add_argument("model", type=str, default=None, help="saved model file.")
+parser.add_argument("--batch_size", type=int, default=64, help="batch size")
 
 args = parser.parse_args()
 
@@ -29,7 +29,7 @@ if args.config:
     cfg.merge_from_file(args.config)  # path to a valid cfg to use
 cfg.freeze()
 
-clevr = ClevrDataModule(cfg, cfg.TRAIN.BATCH_SIZE)
+clevr = ClevrDataModule(cfg, args.batch_size)
 clevr.setup()
 
 # really these should be exposed in the data module...
