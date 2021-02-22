@@ -1,6 +1,5 @@
 import json
 
-# vqa_scratch_url = "https://api.wandb.ai/files/hamishivi/snmn-pytorch/1c6nxnkd/snmn-pytorch/1c6nxnkd/checkpoints/epoch=18-step=199999.ckpt"
 vqa_gt_layout_url = "https://api.wandb.ai/files/hamishivi/snmn-pytorch/mk6iew0k/snmn-pytorch/mk6iew0k/checkpoints/epoch=18-step=199999.ckpt"
 vqa_scratch_url = "https://api.wandb.ai/files/hamishivi/snmn-pytorch/gd8pmlgb/snmn-pytorch/gd8pmlgb/checkpoints/epoch=18-step=199999.ckpt"
 

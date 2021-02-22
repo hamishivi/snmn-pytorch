@@ -97,20 +97,27 @@ python train.py configs/<config name>
 
 Where the config file is one of the files present in the `configs` directory. Look below for short explanations on each config and expected performance on each.  **Note that you'll need to have downloaded the regular CLEVR dataset for the VQA and joint configs, and the CLEVR-ref dataset for the loc and joint configs.** Feel free to make your own config yamls to investigate different hyperparameters and such! We also use pytorch-lightning to handle training and logging, so take a look at `train.py` and `config.py` to see what training options are used to tune them to your preference.
 
+### Testing
+
+To test a saved checkpoint, run
+```bash
+python test.py configs/<config name> <checkpoint file>
+```
+
+Make sure the config and saved model match, and you'll need to have the appropriate dataset downloaded. By default, this will save a csv into a folder called `results`.
+
 ## Results
 
-As this is a re-implementation, performance is not exactly the same as reported in the original repository. See the table below for the expected performance on our implementation and the original implementation for each provided config file. For the joint configs (which have two metrics as they jointly train on two tasks), we provide the VQA (aka regular CLEVR) accuracy first, and then the CLEVR-ref accuracy.
-
-**I am currently collecting these results, will update soon**.
+As this is a re-implementation, performance is not exactly the same as reported in the original repository. See the table below for the expected performance on our implementation and the original implementation for each provided config file. For the joint configs (which have two metrics as they jointly train on two tasks), we provide the VQA (aka regular CLEVR) accuracy first, and then the CLEVR-ref accuracy. Note that the scratch accuracy is a bit low, potentially due to a lack of fine-tuning and testing (many runs get low performance both in original and this repo - performance is best over a few runs). I found that turning on module validation helped performance - but the network appeared to just rely on the 'find' module for everything (indicating that maybe it wasn't actually using modules as intended).
 
 | Config | Description | Original Performance | Our Performance |
 | ------ | ----------- | -------------------- | --------------- |
-| `vqa_scratch` | regular CLEVR dataset, training on final answers. | 93.0% | - |
-| `vqa_gt_layout` | regular CLEVR dataset, training on final answers and ground truth module layouts. | 96.6% | - |
-| `loc_scratch` | CLEVR-ref dataset, training on bounding boxes. | 93.4% | - |
-| `loc_gt_layout` | CLEVR-ref dataset, training on bounding boxes and ground truth module layouts. | 96.0% | - |
-| `joint_scratch` | CLEVR + CLEVR-ref together, training on final answers and bounding boxes. |  93.9% / 95.4% | 81.4% / 90.5% |
-| `joint_gt_layout` | CLEVR + CLEVR-ref together, training on answers, bounding boxes, and ground truth module layouts. | 96.5% / 96.2% | 95.6% / 95.9% |
+| `vqa_scratch` | regular CLEVR dataset, training on final answers. | 93.0% | 89.5% |
+| `vqa_gt_layout` | regular CLEVR dataset, training on final answers and ground truth module layouts. | 96.6% | 96.1% |
+| `loc_scratch` | CLEVR-ref dataset, training on bounding boxes. | 93.4% | 88.7% |
+| `loc_gt_layout` | CLEVR-ref dataset, training on bounding boxes and ground truth module layouts. | 96.0% | 93.2% |
+| `joint_scratch` | CLEVR + CLEVR-ref together, training on final answers and bounding boxes.  (vqa/loc) | 93.9% / 95.4% | 90.4% / 81.4% |
+| `joint_gt_layout` | CLEVR + CLEVR-ref together, training on answers, bounding boxes, and ground truth module layouts.  (vqa/loc) | 96.5% / 96.2% | 95.9% / 95.7% |
 
 
 ## Demo
