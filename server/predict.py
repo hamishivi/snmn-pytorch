@@ -1,14 +1,13 @@
 import re
 import io
+import os
 
 import skimage.io
 import skimage.transform
 import numpy as np
-import torch
-from torch import nn
-import torchvision.models as models
-import torch.nn.functional as F
 from PIL import Image
+import torch
+import torch.nn.functional as F
 import base64
 
 from clevr_model import ClevrModel
@@ -16,23 +15,9 @@ from clevr_joint_model import ClevrJointModel
 from utils import VocabDict, sequence_mask, batch_feat_grid2bbox
 
 
-channel_mean = np.array([123.68, 116.779, 103.939], dtype=np.float32)
 H = 224
 W = 224
 _SENTENCE_SPLIT_REGEX = re.compile(r"(\W+)")
-
-
-class ResnetC4(nn.Module):
-    def __init__(self, resnet):
-        super().__init__()
-        self.features = nn.Sequential(
-            # stop at conv4
-            *list(resnet.children())[:-3]
-        )
-
-    def forward(self, x):
-        x = self.features(x)
-        return x
 
 
 def tokenize(sentence):
@@ -77,17 +62,8 @@ def predict_sample(cfg, checkpoint_filename, question_text, image_file):
         cfg.MODEL.W_IMG * 1.0 / W,
     )
     with torch.no_grad():
-        # preprocessing: extract features.
-        resnet101 = models.resnet101(pretrained=True)
-        resnet101_c4 = ResnetC4(resnet101)
-        im = skimage.io.imread(image_file)[..., :3]
-        assert im.dtype == np.uint8
-        im = skimage.transform.resize(im, [H, W], preserve_range=True)
-        im_val = im[np.newaxis, ...] - channel_mean
-        im_val = np.swapaxes(im_val, 3, 1)
-        im_val = np.swapaxes(im_val, 2, 3)
-        resnet101_c4_val = resnet101_c4(torch.tensor(im_val, dtype=torch.float))
-        resnet101_c4_val = resnet101_c4_val.permute([0, 2, 3, 1])
+        # already preprocessed!
+        resnet101_c4_val = torch.load(os.path.splitext(image_file)[0] + ".pt")
         # prepro: tokenize
         question_tokens = tokenize(question_text)
         # prepro: turn everything into the indices required
@@ -122,6 +98,8 @@ def predict_sample(cfg, checkpoint_filename, question_text, image_file):
         }
         # image attn vis
         attn_imgs = []
+        im = skimage.io.imread(image_file)[..., :3]
+        im = skimage.transform.resize(im, [H, W], preserve_range=True)
         for i in range(output["iattns"].size(1)):
             a_img = attention_interpolation(im, output["iattns"][0, i].numpy())
             a_img = Image.fromarray(a_img.astype("uint8"))

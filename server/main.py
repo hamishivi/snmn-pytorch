@@ -6,7 +6,6 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import numpy as np
 import urllib.request
-import torchvision.models as models
 
 from server.predict import predict_sample
 from server.constants import (
@@ -26,12 +25,6 @@ app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="server/static"), name="static")
 templates = Jinja2Templates(directory="server/templates")
-
-
-@app.on_event("startup")
-async def startup_event():
-    thread = Thread(target=lambda: models.resnet101(pretrained=True))
-    thread.start()
 
 
 @app.get("/", response_class=HTMLResponse)
