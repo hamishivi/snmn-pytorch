@@ -56,7 +56,7 @@ def module_inputs(module_names):
         if module == "_DescribeOne" or module == "_DescribeTwo":
             for j in range(1, num_inputs + 1):
                 if len(stack) >= j:
-                    values_used[-j].append(stack[-j])
+                    values_used[-1].append(stack[-j])
         else:
             for j in range(num_inputs):
                 if len(stack) > 0:

@@ -5,15 +5,13 @@
 
 A pytorch adaption of the stack neural module network. **not an official repository**, but rather just something whipped up during a student's free time. Code largely copied from the original [snmn repository](https://github.com/ronghanghu/snmn), with the obvious changes made to make use of pytorch and pytorch-lightning.
 
-Check out the colab link above to train the model yourself, with preprocessing included. Otherwise, continue reading to see how to do it yourself. Check out a demo of the model [here](https://snmn-pytorch.herokuapp.com/), and my own blog post on this project [here](https://hamishivi.github.io)! 😊
+Check out the colab link above to train the model yourself, with preprocessing included. Otherwise, continue reading to see how to do it yourself. Check out a demo of the model [here](https://snmn-pytorch.herokuapp.com/), and my own blog post on this project [here](https://hamishivi.github.io/2021/01/31/snmn)! 😊
 
-**Note: I'm still playing slightly with this repository due to VQA results not being quite up to par. I may make updates now and then.**
-
-## Usage - Training
+## Usage
 
 ### Packages
 
-Make sure to install python and install the relevant packages (`dev-requirements.txt` contains the requirements for training and development):
+Make sure to install python and install the relevant packages (`dev-requirements.txt` contains the requirements for training and testing):
 ```bash
 pip install -r dev-requirements.txt
 ```
@@ -104,7 +102,7 @@ To test a saved checkpoint, run
 python test.py configs/<config name> <checkpoint file>
 ```
 
-Make sure the config and saved model match, and you'll need to have the appropriate dataset downloaded. By default, this will save a csv into a folder called `results`.
+Make sure the config and saved model match, and you'll need to have the appropriate dataset downloaded.
 
 ## Results
 
@@ -122,6 +120,6 @@ As this is a re-implementation, performance is not exactly the same as reported 
 
 ## Demo
 
-You can see a visualisation of the visual question answering task (with modules visualised) [here](https://snmn-pytorch.herokuapp.com/). Note that it's a free heroku app I setup, so the first inference run takes a fair bit of time to run while it downloads the pretrained models. For more details, check out [my blog post on this project](https://hamishivi.github.io).
+You can see a visualisation of the visual question answering task (with modules visualised) [here](https://snmn-pytorch.herokuapp.com/). Note that it's a free heroku app I setup, so the first inference run takes a fair bit of time to run while it downloads the pretrained models. For more details, check out [my blog post on this project](https://hamishivi.github.io/2021/01/31/snmn/).
 
 You should be able to run the app yourself by running `uvicorn server.main:app`. Check out [uvicorn's options](https://www.uvicorn.org/#usage) for details on how to set specific ports etc. The server will download the pretrained models required for inference when first needed, so make sure you have ~300MB free for the three different pretrained models used.
