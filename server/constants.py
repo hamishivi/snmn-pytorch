@@ -1,7 +1,7 @@
 import json
 
-vqa_gt_layout_url = "https://api.wandb.ai/files/hamishivi/snmn-pytorch/mk6iew0k/snmn-pytorch/mk6iew0k/checkpoints/epoch=18-step=199999.ckpt"
-vqa_scratch_url = "https://api.wandb.ai/files/hamishivi/snmn-pytorch/gd8pmlgb/snmn-pytorch/gd8pmlgb/checkpoints/epoch=18-step=199999.ckpt"
+vqa_scratch_url = "https://drive.google.com/uc?id=1d81Jl_xwVqlbUhY8qaXtnmdMs0rwICVZ"
+vqa_gt_layout_url = "https://drive.google.com/uc?id=1jTL27u0Ie0gBUc1Id3REP-DtJfMv0l-M"
 
 cfg_id_mapping = {0: "configs/vqa_scratch.yaml", 1: "configs/loc_scratch.yaml"}
 

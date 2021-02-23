@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import numpy as np
 import urllib.request
+import gdown
 
 from server.predict import predict_sample
 from server.constants import (
@@ -76,13 +77,13 @@ def predict(image_id: int = 0, question_text: str = "blank", gt: int = 0):
     from config import cfg
 
     # download models if havent
-    if gt == 0 and not os.path.exists("server/static/models/vqa_gt_layout.ckpt"):
-        urllib.request.urlretrieve(
-            vqa_gt_layout_url, "server/static/models/vqa_gt_layout.ckpt"
-        )
     if gt == 1 and not os.path.exists("server/static/models/vqa_scratch.ckpt"):
-        urllib.request.urlretrieve(
-            vqa_scratch_url, "server/static/models/vqa_scratch.ckpt"
+        gdown.download(
+            vqa_scratch_url, "server/static/models/vqa_scratch.ckpt", quiet=False
+        )
+    if gt == 0 and not os.path.exists("server/static/models/vqa_gt_layout.ckpt"):
+        gdown.download(
+            vqa_gt_layout_url, "server/static/models/vqa_gt_layout.ckpt", quiet=False
         )
 
     cfg.merge_from_file(cfg_id_mapping[0])
